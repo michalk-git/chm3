@@ -28,18 +28,20 @@ namespace Core_Health {
 
 enum Core_HealthSignals {
     TIMEOUT_SIG = QP::Q_USER_SIG, // time event timeout
-	REQUEST_UPDATE_SIG,     //AO_CHM publishes REQUEST_SIG to itself and each subscribed member
-	SUBSCRIBE_SIG,   //each member can subscribe by SUBSCRIBE_SIG
-	UNSUBSCRIBE_SIG, //each member can unsubscribe by UNSUBSCRIBE_SIG	 
-    MAX_PUB_SIG,     // the last published signal
-
-	MALFUNCTION_SIG,
-	MEMBER_SIG,
-	NOT_MEMBER_SIG,
-	KICK_SIG,        //AO_CHM sends itself a KICK_SIG to signal the time to (potentially) kick the watchdog 
-	UPDATE_SIG,      // AO_CHM sends itself an UPDATE_SIG to signal the time to request an update from the subscribed members
-	ALIVE_SIG,       //each subscribed member that receives an UPDATE_SIG posts an ALIVE_SIG to AO_CHM in response
-    MAX_SIG         // the last signal
+	REQUEST_UPDATE_SIG,           //AO_CHM publishes REQUEST_SIG to itself and each subscribed member
+	SUBSCRIBE_SIG,                //each member can subscribe by SUBSCRIBE_SIG
+	UNSUBSCRIBE_SIG,              //each member can unsubscribe by UNSUBSCRIBE_SIG
+	TERMINATE_SIG,                //signal that terminates the program
+    MAX_PUB_SIG,                  // the last published signal
+	 
+	
+	MALFUNCTION_SIG,              //signal to an Member AO to elicit malfunctioning behaviour (no AlIVE signals for a specified amount of periods)
+	MEMBER_SIG,                   //signal to the system to update the subscribers array
+	NOT_MEMBER_SIG,               //signal to the system to update the subscribers array
+	KICK_SIG,                     //AO_CHM sends itself a KICK_SIG to signal the time to (potentially) kick the watchdog 
+	UPDATE_SIG,                   // AO_CHM sends itself an UPDATE_SIG to signal the time to request an update from the subscribed members
+	ALIVE_SIG,                    //each subscribed member that receives an UPDATE_SIG posts an ALIVE_SIG to AO_CHM in response
+    MAX_SIG                       // the last signal
 };
 
 } // namespace Core_Health

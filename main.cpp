@@ -34,7 +34,8 @@
 #include "qpcpp.h"
 #include "system.h"
 #include "bsp.h"
-
+#include "watchdog.h"
+#include <iostream>
 using namespace Core_Health;
 
 //............................................................................
@@ -82,5 +83,9 @@ int main(int argc, char *argv[]) {
                     chmQueueSto, Q_DIM(chmQueueSto),
                     (void *)0, 0U);
 
+
+
+
+	
     return QP::QF::run(); // run the QF application
 }

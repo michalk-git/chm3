@@ -37,7 +37,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-
+#include "watchdog.h"
 Q_DEFINE_THIS_FILE
 
 //****************************************************************************
@@ -57,8 +57,7 @@ static uint32_t l_rnd; // random seed
 void BSP::init(int argc, char **argv) {
     printf("Press s to subscribe\n"
   		   "Press u to unsubscribe\n"
-           "Press ESC to quit...\n",
-           QP::versionStr);
+           "Press ESC to quit...\n" );
 
     BSP::randomSeed(1234U);
 
@@ -134,18 +133,22 @@ void QF_onClockTick(void) {
 			printf("User doesn't exist\n");
 			break;
 		}
-		Core_Health::AO_Member[index]->postFIFO(Q_NEW(QEvt, Core_Health::SUBSCRIBE_SIG), CHM(x));
+		Core_Health::AO_Member[index]->postFIFO(Q_NEW(QEvt, Core_Health::SUBSCRIBE_SIG));
 		break;
 	}
 	case 'u': {
 		printf("u\n");
-		printf("Enter index between 0 to %d: ", N_MEMBER - 1);
+		printf("Enter index between 0 to %d : ", N_MEMBER - 1);
 		index = QF_consoleWaitForKey() - '0';
 		printf("%d\n", index);
 		if (index >= N_MEMBER) {
 			printf("User doesn't exist\n");
 			break;
 		}
+
+		Core_Health::AO_Member[index]->postFIFO(Q_NEW(QEvt, Core_Health::UNSUBSCRIBE_SIG));
+		break;
+	}
 	case 'm': {
 		printf("m\n");
 		printf("Enter index between 0 to %d: ", N_MEMBER - 1);
@@ -161,13 +164,13 @@ void QF_onClockTick(void) {
 		Core_Health::MalfunctionEvt* e = Q_NEW(Core_Health::MalfunctionEvt, Core_Health::MALFUNCTION_SIG);
 		e->memberNum = index;
 		e->period_num = misses;
-			Core_Health::AO_Member[index]->postFIFO(e, CHM(x));
+		Core_Health::AO_Member[index]->postFIFO(e);
 		break;
 	}
 	default: {
 		break;
 	}
-	}
+
 	}
 }
 

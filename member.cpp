@@ -16,7 +16,7 @@ public:
     static Member inst[N_MEMBER];
 
 private:
-
+	int stay_silent;
 
 public:
 	Member();
@@ -69,9 +69,9 @@ namespace Core_Health {
 	Member Member::inst[N_MEMBER];
 	//${AOs::Member::Member} .......................................................
 	Member::Member()
-		: QActive(&initial)
+		: QActive(&initial), stay_silent(0) {};
 		
-	{}
+	
 
 	//${AOs::Member::SM} ..........................................................
 	Q_STATE_DEF(Member, initial) {
@@ -88,11 +88,13 @@ namespace Core_Health {
 		switch (e->sig) {
 		case REQUEST_UPDATE_SIG: {
 			//if a member AO recevied a REQUEST_UPDATE_SIG it needs to post an ALIVE_SIG to the CHM AO with the member index
-			std::cout << "recived" << std::endl;
 			Core_Health::MemberEvt* ae = Q_NEW(Core_Health::MemberEvt, ALIVE_SIG);
 			ae->memberNum = Member_ID(this);
-			printf("mem id %d\n", ae->memberNum);
-			AO_CHM->postFIFO(ae, this);
+			if (stay_silent == 0) {
+				AO_CHM->postFIFO(ae, this);
+				std::cout << "member " << (int)ae->memberNum << " has sent ALIVE signal" <<std::endl;
+			}
+			else stay_silent--;
 			status_ = Q_RET_HANDLED;
 			break;
 		}
@@ -102,6 +104,7 @@ namespace Core_Health {
 			Core_Health::MemberEvt* ae = Q_NEW(Core_Health::MemberEvt, MEMBER_SIG);
 			ae->memberNum = Member_ID(this);
 			AO_CHM->postFIFO(ae, this);
+			std::cout << "member " << (int)ae->memberNum << " has subscribed" << std::endl;
 			status_ = Q_RET_HANDLED;
 			break;
 		}
@@ -111,11 +114,12 @@ namespace Core_Health {
 			 Core_Health::MemberEvt* ae = Q_NEW(Core_Health::MemberEvt, NOT_MEMBER_SIG);
 			 ae->memberNum = Member_ID(this);
 			 AO_CHM->postFIFO(ae, this);
+			 std::cout << "member " << (int)ae->memberNum << " has unsubscribed" << std::endl;
 			 status_ = Q_RET_HANDLED;
 			 break;
 		}
 		case MALFUNCTION_SIG: {
-             
+			stay_silent = (Q_EVT_CAST(MalfunctionEvt)->period_num);
 			status_ = Q_RET_HANDLED;
 			break;
 		}
