@@ -16,7 +16,7 @@ public:
     static Member inst[N_MEMBER];
 
 private:
-	int stay_silent;
+	int num_silent_cycles;
 
 public:
 	Member();
@@ -69,7 +69,7 @@ namespace Core_Health {
 	Member Member::inst[N_MEMBER];
 	//${AOs::Member::Member} .......................................................
 	Member::Member()
-		: QActive(&initial), stay_silent(0) {};
+		: QActive(&initial), num_silent_cycles(0) {};
 		
 	
 
@@ -88,13 +88,14 @@ namespace Core_Health {
 		switch (e->sig) {
 		case REQUEST_UPDATE_SIG: {
 			//if a member AO recevied a REQUEST_UPDATE_SIG it needs to post an ALIVE_SIG to the CHM AO with the member index
-			Core_Health::MemberEvt* ae = Q_NEW(Core_Health::MemberEvt, ALIVE_SIG);
-			ae->memberNum = Member_ID(this);
-			if (stay_silent == 0) {
+			//unless the AO has received a malfunctioning signal. In that case the member AO will stay silent for the number of periods specified
+			if (num_silent_cycles == 0) {
+				Core_Health::MemberEvt* ae = Q_NEW(Core_Health::MemberEvt, ALIVE_SIG);
+				ae->memberNum = Member_ID(this);
 				AO_CHM->postFIFO(ae, this);
 				std::cout << "member " << (int)ae->memberNum << " has sent ALIVE signal" <<std::endl;
 			}
-			else stay_silent--;
+			else num_silent_cycles--;
 			status_ = Q_RET_HANDLED;
 			break;
 		}
@@ -119,7 +120,7 @@ namespace Core_Health {
 			 break;
 		}
 		case MALFUNCTION_SIG: {
-			stay_silent = (Q_EVT_CAST(MalfunctionEvt)->period_num);
+			num_silent_cycles = (Q_EVT_CAST(MalfunctionEvt)->period_num);
 			status_ = Q_RET_HANDLED;
 			break;
 		}

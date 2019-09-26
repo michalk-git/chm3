@@ -9,6 +9,7 @@
 
 Q_DEFINE_THIS_FILE
 
+using namespace Core_Health;
 
 
 // Active object class -------------------------------------------------------
@@ -22,13 +23,12 @@ namespace Core_Health {
 
 	private:
 		bool subscribers[N_MEMBER];
-		bool subscribers_alive[N_MEMBER+1];
-		QP::QTimeEvt timeEvt_update;
+		bool AOs_alive[N_MEMBER+1];
+		QP::QTimeEvt timeEvt_request_update;
 		QP::QTimeEvt timeEvt_kick;
-		QP::QTimeEvt timeEvt;
 		std::thread watchdog;
-		 QP::QEvt const * wdQueueSto[N_MEMBER];
-		// int watchdog_in_chm;
+		QP::QEvt const * wdQueueSto[N_MEMBER];
+
 		
 	public:
 		CHM();
@@ -59,41 +59,39 @@ QP::QActive * const AO_CHM = &CHM::inst; // "opaque" pointer to CHM AO
 //$define${AOs::CHM} vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 namespace Core_Health {
 
-	//${AOs::Table} ..............................................................
+	//${AOs::CHM} ..............................................................
 	CHM CHM::inst;
 	//${AOs::CHM::CHM} .......................................................
 	CHM::CHM()
-		: QActive(&initial), timeEvt_update(this,UPDATE_SIG,0U), timeEvt(this, TIMEOUT_SIG, 0U),timeEvt_kick(this,KICK_SIG,0U)
+		: QActive(&initial), timeEvt_request_update(this,UPDATE_SIG,0U) ,timeEvt_kick(this,KICK_SIG,0U)
 	{
-		
 	
 		watch_dog_queue.init(wdQueueSto, Q_DIM(wdQueueSto));
 		watchdog = std::thread(WatchDogFunction, &watch_dog_queue);
-		
-
-		//index = N_MEMBER is subscribers_alive array is for the CHM system to signal activity
-		subscribers_alive[N_MEMBER] = false;
-		//initialize subscribers_alive array to false and subscribers array to true (the default is that all users are subscribers and havn't sent an ALIVE signal yet
+	
+		//index = N_MEMBER in AOs_alive array is for the CHM system to signal activity: initializing it to false meaning the CHM hasn't sent an ALIVE signal yet
+		AOs_alive[N_MEMBER] = false;
+		//initialize AOs_alive array to false and subscribers array to true (the starting default is that all users are subscribers and haven't sent an ALIVE signal yet
 		for (int i = 0; i < N_MEMBER ; i++) {
-			subscribers_alive[i] = false;
+			AOs_alive[i] = false;
 			subscribers[i] = true;
 		}
 		
 	};
 
 	//${AOs::CHM::SM} ..........................................................
+    //${AOs::CHM::SM::initial}
 	Q_STATE_DEF(CHM, initial) {
-		//${AOs::CHM::SM::initial}
+
 		(void)e; // suppress the compiler warning about unused parameter
 
-		//subscribe to REQUEST_SIG in order to check CHM AO is still active
+		//the system needs to subscribe to REQUEST_UPDATE_SIG to know when to send ALIVE signal
 		subscribe(REQUEST_UPDATE_SIG);
-		//arm time event that fires the signal UPDATE_SIG every T_AO_ALIVE_SEC 
-		timeEvt_update.armX(BSP::TICKS_PER_SEC*(Core_Health::CHMConfig_t::T_AO_ALIVE_SEC), BSP::TICKS_PER_SEC * (Core_Health::CHMConfig_t::T_AO_ALIVE_SEC));
-		//arm time event that fires  the signal KICK_SIG every T_UPDATE_WATCHDOG_SEC
-		timeEvt_kick.armX(BSP::TICKS_PER_SEC*(Core_Health::CHMConfig_t::T_UPDATE_WATCHDOG_SEC), BSP::TICKS_PER_SEC*(Core_Health::CHMConfig_t::T_UPDATE_WATCHDOG_SEC));
-		
-		//timeEvt.armX(BSP::TICKS_PER_SEC , BSP::TICKS_PER_SEC);
+		//arm time event that fires the signal UPDATE_SIG every T_AO_ALIVE_SEC seconds
+		timeEvt_request_update.armX(BSP::TICKS_PER_SEC*(CHMConfig_t::T_AO_ALIVE_SEC), BSP::TICKS_PER_SEC * (CHMConfig_t::T_AO_ALIVE_SEC));
+		//arm time event that fires  the signal KICK_SIG every T_UPDATE_WATCHDOG_SEC seconds
+		timeEvt_kick.armX(BSP::TICKS_PER_SEC*(CHMConfig_t::T_UPDATE_WATCHDOG_SEC), BSP::TICKS_PER_SEC*(CHMConfig_t::T_UPDATE_WATCHDOG_SEC));
+
 		return tran(&active);
 	}
 	//${AOs::CHM::SM::active} ..................................................
@@ -101,33 +99,31 @@ namespace Core_Health {
 
 		
 		QP::QState status_;
-	//	std::cout << "in system: active" << std::endl;
 
 		switch (e->sig) {
 
 		case UPDATE_SIG: {
-			//publish a time event with signal REQUEST_SIG
+			//publish a time event with signal REQUEST_UPDATE_SIG
 			QP::QEvt* e = Q_NEW(QP::QEvt, REQUEST_UPDATE_SIG);
 			QP::QF::PUBLISH(e, this);
 			status_ = Q_RET_HANDLED;
 			break;
 		}
 		case REQUEST_UPDATE_SIG: {
-
-			//if CHM recevied REQUEST_SIG we need to update subscribers_alive array in index = N_MEMBER to signal the CHM AO is active
-			subscribers_alive[N_MEMBER] = true;
+			//if CHM recevied REQUEST_UPDATE_SIG we need to update AOs_alive array in index = N_MEMBER to signal the CHM AO is active
+			AOs_alive[N_MEMBER] = true;
 			status_ = Q_RET_HANDLED;
 			break;
 		}
 		case ALIVE_SIG: {
-			//if received an ALIVE_SIG CHm needs to update the subscribers_alive array in the appropriate index 
-			std::cout << "I'm alive\n" << std::endl;
-			subscribers_alive[(Q_EVT_CAST(MemberEvt)->memberNum)] = true;
+			//if received an ALIVE_SIG CHM needs to update the AOs_alive array in the appropriate index 
+			std::cout << "I'm alive" << std::endl;
+			AOs_alive[(Q_EVT_CAST(MemberEvt)->memberNum)] = true;
 			status_ = Q_RET_HANDLED;
 			break;
 		}
 		case Q_EXIT_SIG: {
-			timeEvt_update.disarm();
+			timeEvt_request_update.disarm();
 			timeEvt_kick.disarm();
 			//timeEvt.disarm();
 			status_ = Q_RET_HANDLED;
@@ -149,37 +145,31 @@ namespace Core_Health {
 		case MEMBER_SIG: {
 			//update subscribers array to show a user has subscribed
 			subscribers[(Q_EVT_CAST(MemberEvt)->memberNum)] = true;
-			//update subscribers_alive array- if a user has subscribed it counts as an ALIVE signal
-			subscribers_alive[(Q_EVT_CAST(MemberEvt)->memberNum)] = true;
+			//update AOs_alive array- if a user has subscribed it counts as an ALIVE signal
+			AOs_alive[(Q_EVT_CAST(MemberEvt)->memberNum)] = true;
 			status_ = Q_RET_HANDLED;
 			break;
 		}
 		case KICK_SIG: {
-			
+			QP::QEvt ev;
 			bool kick = true;
-			//pass through subscribers_alive array and check whether any subscribed members aren't responsive.
-			//if so print error log and refrain from kicking watchdog
+			//pass through AOs_alive array and check whether any subscribed members aren't responsive.
+			//if so print to error log and refrain from kicking watchdog
 			for (int i = 0; i < N_MEMBER ; i++) {
                 //check for each user if he is both subscribed and non-active: if so update kick to false (to make sure the system doesn't kick watchdog) and print to error log
-				//std::cout << "in start kick_sig" << std::endl;
-				if (subscribers_alive[i] == false && subscribers[i] == true) {
+				if ((AOs_alive[i] == false) && (subscribers[i] == true)) {
 					kick = false;
 					if(i == N_MEMBER) std::cout<<"Watchdog wasn't kicked because CHM system didn't send ALIVE signal"<<std::endl;
-					else std::cout <<"Watchdog wasn't kicked because member "<<(int)i<< " didn't send ALIVE signal\n" <<std::endl;
+					else std::cout <<"Watchdog wasn't kicked because member "<<i<< " didn't send ALIVE signal" <<std::endl;
 				}
 			}
-		//	std::cout << "after checking" << std::endl;
-			//check if the chm sys is unresponsive
-			if (subscribers_alive[N_MEMBER] == false) kick = false;
+			//check if the chm system is unresponsive
+			if (AOs_alive[N_MEMBER] == false) kick = false;
 			//if all subscribers are alive, kick watchdog
-			QP::QEvt ev;
-			if (kick == true) {
-			//	std::cout << "kick_sig sending now" << std::endl;
-				watch_dog_queue.post(&ev, QP::QF_NO_MARGIN);
-				std::cout << "kick signal has been sent" << std::endl;
-			}
-			//set the subscribers_alive array back to default (false) for next cycle
-			for (int i = 0; i < N_MEMBER + 1; i++) subscribers_alive[i] = false;
+			if (kick == true) watch_dog_queue.post(&ev, QP::QF_NO_MARGIN);
+
+			//set the AOs_alive array back to default (false) for next cycle
+			for (int i = 0; i < N_MEMBER + 1; i++) AOs_alive[i] = false;
 			status_ = Q_RET_HANDLED;
 			break;
 		}
@@ -193,7 +183,6 @@ namespace Core_Health {
 		}
 		*/
 		default: {
-		//	std::cout << "in system: default sig" << std::endl;
 			status_ = super(&top);
 			break;
 		}
