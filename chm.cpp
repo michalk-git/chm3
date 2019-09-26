@@ -125,7 +125,6 @@ namespace Core_Health {
 		case Q_EXIT_SIG: {
 			timeEvt_request_update.disarm();
 			timeEvt_kick.disarm();
-			//timeEvt.disarm();
 			status_ = Q_RET_HANDLED;
 			break;
 		}

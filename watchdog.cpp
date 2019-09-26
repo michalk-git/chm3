@@ -9,14 +9,17 @@ void WatchDogFunction(QP::QEQueue* msg_queue) {
 	WatchDog wd;
 	int secs_in_dur = 0, last_wd = 0,curr_wd = 0;
 	const QP::QEvt* event;
+	std::chrono::duration<float, std::milli> dur;
+	std::chrono::system_clock::time_point now;
+
 	//find the start time of the thread and initialize the variable 'last_time'
 	std::chrono::system_clock::time_point last_time = std::chrono::system_clock::now();
 
 	while (1) {
 		//find the current time : now
-		std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+		now = std::chrono::system_clock::now();
         //find the difference in time (ie duration) between now and last time in millisecond time unit
-		std::chrono::duration<float, std::milli> dur = now - last_time;
+		dur = now - last_time;
 		//translate from type 'duration' to int (which represents the number of millisconds) and convert the result to seconds
 		secs_in_dur = (dur.count() / 1000);
 		//decrease the watchdog by the number of seconds calculated
