@@ -11,6 +11,12 @@ Q_DEFINE_THIS_FILE
 
 using namespace Core_Health;
 
+struct Subscribed_AO
+{
+	uint16_t id = 0;
+	bool subscribed = false;
+	bool keep_alive_received = false;
+};
 
 // Active object class -------------------------------------------------------
 //$declare${AOs::CHM} vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv

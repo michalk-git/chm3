@@ -5,8 +5,23 @@
 
 void WatchDogFunction(QP::QEQueue* msg_queue);
 
+
+template <class T>
+class singelton_t
+{
+
+public:
+	static T& instance() {
+		static T val;
+		return val;
+	}
+};
+
+
+
 class WatchDog {
 	int counter;
+	
 public:
 	WatchDog() : counter(Core_Health::CHMConfig_t::T_WATCHDOG_RESET_SEC) {};
 	void kick() {
