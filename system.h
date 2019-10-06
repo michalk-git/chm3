@@ -34,7 +34,7 @@ enum Core_HealthSignals {
 	TERMINATE_SIG,                //signal that terminates the program
     MAX_PUB_SIG,                  // the last published signal
 	 
-	
+	NEW_USER_SIG,
 	MALFUNCTION_SIG,              //signal to an Member AO to elicit malfunctioning behaviour (no AlIVE signals for a specified amount of periods)
 	MEMBER_SIG,                   //signal to the system to update the subscribers array
 	NOT_MEMBER_SIG,               //signal to the system to update the subscribers array
@@ -44,18 +44,26 @@ enum Core_HealthSignals {
     MAX_SIG                       // the last signal
 };
 
+
+
+
+struct User{
+	uint16_t id = 0;
+	bool subscribed = false;
+	bool keep_alive_received = false;
+};
 } // namespace Core_Health
 
 //$declare${Events::TableEvt} vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 namespace Core_Health {
 
-
-
-
-
 class MemberEvt : public QP::QEvt {
 public:
 	uint8_t memberNum;
+};
+class UserEvt : public QP::QEvt {
+public:
+	uint8_t id;
 };
 class MalfunctionEvt : public MemberEvt {
 public:

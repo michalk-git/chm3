@@ -185,12 +185,13 @@
     <ClCompile Include="bsp.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="member.cpp" />
-    <ClCompile Include="system.cpp" />
     <ClCompile Include="chm.cpp" />
+    <ClCompile Include="system.cpp" />
     <ClCompile Include="watchdog.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bsp.h" />
+    <ClInclude Include="singleton.h" />
     <ClInclude Include="system.h" />
     <ClInclude Include="watchdog.h" />
   </ItemGroup>

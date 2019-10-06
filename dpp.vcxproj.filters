@@ -4,14 +4,15 @@
     <ClCompile Include="bsp.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="..\..\..\include\qstamp.cpp" />
-    <ClCompile Include="system.cpp" />
     <ClCompile Include="member.cpp" />
     <ClCompile Include="chm.cpp" />
     <ClCompile Include="watchdog.cpp" />
+    <ClCompile Include="system.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bsp.h" />
     <ClInclude Include="system.h" />
     <ClInclude Include="watchdog.h" />
+    <ClInclude Include="singleton.h" />
   </ItemGroup>
 </Project>

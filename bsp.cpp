@@ -1,36 +1,4 @@
-//****************************************************************************
-// Product: Core_Health example (console)
-// Last Updated for Version: 6.3.6
-// Date of the Last Update:  2018-10-14
-//
-//                    Q u a n t u m  L e a P s
-//                    ------------------------
-//                    Modern Embedded Software
-//
-// Copyright (C) 2005-2018 Quantum Leaps, LLC. All rights reserved.
-//
-// This program is open source software: you can redistribute it and/or
-// modify it under the terms of the GNU General Public License as published
-// by the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// Alternatively, this program may be distributed and modified under the
-// terms of Quantum Leaps commercial licenses, which expressly supersede
-// the GNU General Public License and are specifically designed for
-// licensees interested in retaining the proprietary status of their code.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program. If not, see <http://www.gnu.org/licenses/>.
-//
-// Contact information:
-// https://www.state-machine.com
-// mailto:info@state-machine.com
-//****************************************************************************
+
 #include "qpcpp.h"
 #include "system.h"
 #include "bsp.h"
@@ -110,6 +78,9 @@ void QF::onCleanup(void) {  // cleanup callback
     printf("\nBye! Bye!\n");
     QF_consoleCleanup();
 }
+
+
+
 //............................................................................
 void QF_onClockTick(void) {
 	QF::TICK_X(0U, &Core_Health::l_clock_tick); // process time events at rate 0
@@ -121,6 +92,17 @@ void QF_onClockTick(void) {
 	case '\33': { // ESC pressed?
 		Core_Health::BSP::terminate(0);
 		break;
+	}
+	case 'n': {	
+		printf("n\n");
+		printf("Enter id\n");
+		//need to write function !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		index = QF_consoleWaitForKey() - '0';
+		printf("%d\n", index);
+		Core_Health::UserEvt* ae = Q_NEW(Core_Health::UserEvt, Core_Health::NEW_USER_SIG);
+		ae->id = index;
+		Core_Health::AO_CHM->postFIFO(ae);
+
 	}
 
 	case 's': {
