@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "watchdog.h"
+#include <map>
+#include <string>
+#include <iostream>
 Q_DEFINE_THIS_FILE
 
 //****************************************************************************
@@ -23,7 +26,8 @@ static uint32_t l_rnd; // random seed
 
 //............................................................................
 void BSP::init(int argc, char **argv) {
-    printf("Press s to subscribe\n"
+    printf("Press n to create account\n"
+		   "Press s to subscribe\n"
   		   "Press u to unsubscribe\n"
            "Press ESC to quit...\n" );
 
@@ -31,13 +35,7 @@ void BSP::init(int argc, char **argv) {
 
     (void)argc;
     (void)argv;
-    Q_ALLEGE(QS_INIT(argc > 1 ? argv[1] : (void *)0));
-    QS_OBJ_DICTIONARY(&l_clock_tick); // must be called *after* QF::init()
-    QS_USR_DICTIONARY(PHILO_STAT);
 
-    // setup the QS filters...
-    QS_FILTER_ON(QP::QS_ALL_RECORDS);
-    QS_FILTER_OFF(QP::QS_QF_TICK);
 }
 //............................................................................
 void BSP::terminate(int16_t result) {
@@ -79,6 +77,12 @@ void QF::onCleanup(void) {  // cleanup callback
     QF_consoleCleanup();
 }
 
+int GetId() {
+	std::string id;
+	std::cout << "Enter ID" << std::endl;
+	std::cin >> id;
+	return stoi(id);
+}
 
 
 //............................................................................
@@ -87,7 +91,10 @@ void QF_onClockTick(void) {
 
 	QS_RX_INPUT(); // handle the QS-RX input
 	QS_OUTPUT();   // handle the QS output
+	static std::map<unsigned int, unsigned int> id_to_index;                    //dictionary in which the key is the users id the value is the members array index
 	int index = 0, misses = 0;
+	static int num_users = 0;
+	int id = -1;
 	switch (QF_consoleGetKey()) {
 	case '\33': { // ESC pressed?
 		Core_Health::BSP::terminate(0);
@@ -95,23 +102,39 @@ void QF_onClockTick(void) {
 	}
 	case 'n': {	
 		printf("n\n");
-		printf("Enter id\n");
-		//need to write function !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		index = QF_consoleWaitForKey() - '0';
-		printf("%d\n", index);
-		Core_Health::UserEvt* ae = Q_NEW(Core_Health::UserEvt, Core_Health::NEW_USER_SIG);
-		ae->id = index;
-		Core_Health::AO_CHM->postFIFO(ae);
-
+		id = GetId();
+		//check if the user is already in the system
+		if (id_to_index.find(id) != id_to_index.end()) {
+			printf("User already exists\n");
+			break;
+		}
+		// we need to check we havn't reached the maximum users allowed
+		else if (num_users >= N_MEMBER) {
+			printf("Reached maximum limit of users\n");
+			break;
+		}
+		//else add the key-value pair of id-index to the id_to_index dictionary, increase the users count and print out the user's id
+		else {
+			printf("Your system id is %d\n",num_users);
+			id_to_index[id] = num_users;
+			num_users++;
+			Core_Health::UserEvt* ae = Q_NEW(Core_Health::UserEvt, Core_Health::NEW_USER_SIG);
+			ae->id = id;
+			Core_Health::AO_CHM->postFIFO(ae);
+			
+		}
+		
+		break;
 	}
 
 	case 's': {
 
 		printf("s\n");
-		printf("Enter index between 0 to %d: ", N_MEMBER - 1);
+		printf("num users:  %d: ", num_users);
+		printf("Enter system id");
 		index = QF_consoleWaitForKey() - '0';
 		printf("%d\n", index);
-		if (index >= N_MEMBER) {
+		if (index >= num_users) {
 			printf("User doesn't exist\n");
 			break;
 		}
@@ -120,10 +143,10 @@ void QF_onClockTick(void) {
 	}
 	case 'u': {
 		printf("u\n");
-		printf("Enter index between 0 to %d : ", N_MEMBER - 1);
+		printf("Enter system id");
 		index = QF_consoleWaitForKey() - '0';
 		printf("%d\n", index);
-		if (index >= N_MEMBER) {
+		if (index >= num_users ) {
 			printf("User doesn't exist\n");
 			break;
 		}
@@ -133,10 +156,10 @@ void QF_onClockTick(void) {
 	}
 	case 'm': {
 		printf("m\n");
-		printf("Enter index between 0 to %d: ", N_MEMBER - 1);
+		printf("Enter system ID ");
 		index = QF_consoleWaitForKey() - '0';
 		printf("%d\n", index);
-		if (index >= N_MEMBER) {
+		if (index >= num_users) {
 			printf("User doesn't exist\n");
 			break;
 		}

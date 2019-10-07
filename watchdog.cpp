@@ -17,7 +17,7 @@ void WatchDog::WatchDogFunction() {
 	while (1) {
 		//find the current time : now
 		now = std::chrono::system_clock::now();
-        //find the difference in time (ie duration) between now and last time in millisecond time unit
+        //find the difference in time (ie duration) between now and last time in seconds time unit
 		dur = std::chrono::duration_cast<std::chrono::seconds>(now - last_time);
 		
 
