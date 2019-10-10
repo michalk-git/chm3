@@ -108,10 +108,11 @@ namespace Core_Health {
 		switch (e->sig) {
 
 		case UPDATE_SIG: {
-			if (wd.GetCounter() <= 0)  std::terminate(); 
+			std::cout << "update" << std::endl;
 			//publish a time event with signal REQUEST_UPDATE_SIG
 			QP::QEvt* e = Q_NEW(QP::QEvt, REQUEST_UPDATE_SIG);
 			QP::QF::PUBLISH(e, this);
+		//	if (curr_subscribed == 0) wd.kick();
 			status_ = Q_RET_HANDLED;
 			break;
 		}
@@ -134,14 +135,13 @@ namespace Core_Health {
 			//if received an ALIVE_SIG CHM needs to update the members array in the appropriate index.
 			std::cout << "I'm alive" << std::endl;
 			index = (Q_EVT_CAST(MemberEvt)->memberNum);
+			
 			//check if the user hasn't sent an ALIVE_SIG already: if he hasn't update the members array in the appropriate index and advance the curr_alive variable
 			if (members[index].keep_alive_received == false) {
 				members[index].keep_alive_received = true;
-				curr_alive++;
+				//curr_alive++;
 			}
-			//if all the subscribed users have sent an ALIVE_SIG we should kick the watchdog 
-			if (curr_alive == curr_subscribed)	wd.kick();
-
+	
 			status_ = Q_RET_HANDLED;
 			break;
 		}
@@ -164,9 +164,9 @@ namespace Core_Health {
 			index = (Q_EVT_CAST(MemberEvt)->memberNum);
 			if (members[index].subscribed == true) {
 				members[index].subscribed = false;
-				curr_subscribed--;
+				//curr_subscribed--;
 				//if the user sent an ALIVE_SIG in the past we need to decrease the curr_alive variable since 'curr_alive' is the live users from the subscribers subset
-				if (members[index].keep_alive_received == true) curr_alive--;
+				//if (members[index].keep_alive_received == true) curr_alive--;
 				
 			}
 
@@ -178,10 +178,10 @@ namespace Core_Health {
 			index = (Q_EVT_CAST(MemberEvt)->memberNum);
 			if (members[index].subscribed == false) {
 				members[index].subscribed = true;
-				curr_subscribed++;
+			//	curr_subscribed++;
 				//the subscription is an ALIVE signal
 				members[index].keep_alive_received = true;
-				curr_alive++;
+			//	curr_alive++;
 			}
 
 			status_ = Q_RET_HANDLED;
@@ -191,6 +191,8 @@ namespace Core_Health {
 		case KICK_SIG: {
 		
 			QP::QEvt ev;
+			std::cout << "kick" << std::endl;
+			
 			bool kick = true;
 			//pass through AOs_alive array and check whether any subscribed members aren't responsive.
 			//if so print to error log and refrain from kicking watchdog
@@ -208,7 +210,8 @@ namespace Core_Health {
 
 			//set the AOs_alive array back to default (false) for next cycle
 			for (int i = 0; i < N_MEMBER ; i++) members[i].keep_alive_received = false;
-			curr_alive = 0;
+			//curr_alive = 0;
+			if(wd.GetCounter() <= 0) std::terminate();
 			status_ = Q_RET_HANDLED;
 			break;
 		}
