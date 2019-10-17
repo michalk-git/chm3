@@ -84,55 +84,59 @@ int GetId() {
 	return stoi(id);
 }
 
+typedef enum {
+	FREE,
+	SUBSCRIBE,
+	REGISTER,
+	UNSUBSCRIBE,
+	MALFUNCTION,
+	MALFUNCTION_GET_MISSES
+}Request;
 
-//............................................................................
-void QF_onClockTick(void) {
-	QF::TICK_X(0U, &Core_Health::l_clock_tick); // process time events at rate 0
-
-	QS_RX_INPUT(); // handle the QS-RX input
-	QS_OUTPUT();   // handle the QS output
+void Process(Request* r) {
 	static std::map<unsigned int, unsigned int> id_to_index;                    //dictionary in which the key is the users id the value is the members array index
-	int index = 0, misses = 0;
+	static int index = 0, misses = 0;
 	static int num_users = 0;
-	int id = -1;
-	switch (QF_consoleGetKey()) {
-	case '\33': { // ESC pressed?
-		Core_Health::BSP::terminate(0);
-		break;
-	}
-	case 'n': {	
-		printf("n\n");
-		id = GetId();
+	static int id = 0;
+	int c;
+	WatchDog& wd = WatchDog::getInstance();
+	switch (*r) {
+	case REGISTER: {
+		
+		if ((c = QF_consoleGetKey()) == 0) break;
+		if (c != 13) {
+			printf("%d",(c - '0'));
+			id *= 10;
+			id += (c - '0');
+			//printf("%d\n", id);
+			break;
+		}
+		else *r = FREE;
 		//check if the user is already in the system
 		if (id_to_index.find(id) != id_to_index.end()) {
 			printf("User already exists\n");
-			break;
-		}
-		// we need to check we havn't reached the maximum users allowed
-		else if (num_users >= N_MEMBER) {
-			printf("Reached maximum limit of users\n");
+			*r = FREE;
 			break;
 		}
 		//else add the key-value pair of id-index to the id_to_index dictionary, increase the users count and print out the user's id
 		else {
-			printf("Your system id is %d\n",num_users);
+			printf("Your system id is %d\n", num_users);
 			id_to_index[id] = num_users;
 			num_users++;
 			Core_Health::UserEvt* ae = Q_NEW(Core_Health::UserEvt, Core_Health::NEW_USER_SIG);
 			ae->id = id;
 			Core_Health::AO_CHM->postFIFO(ae);
-			
+			*r = FREE;
+			id = 0;
 		}
-		
 		break;
 	}
-
-	case 's': {
-
-		printf("s\n");
-		printf("num users:  %d: ", num_users);
-		printf("Enter system id");
-		index = QF_consoleWaitForKey() - '0';
+	case SUBSCRIBE: {
+		if ((c = QF_consoleGetKey()) != 0) {
+			index = c - '0';
+			*r = FREE;
+		}
+		else break;
 		printf("%d\n", index);
 		if (index >= num_users) {
 			printf("User doesn't exist\n");
@@ -141,43 +145,109 @@ void QF_onClockTick(void) {
 		Core_Health::AO_Member[index]->postFIFO(Q_NEW(QEvt, Core_Health::SUBSCRIBE_SIG));
 		break;
 	}
-	case 'u': {
-		printf("u\n");
-		printf("Enter system id");
-		index = QF_consoleWaitForKey() - '0';
-		printf("%d\n", index);
-		if (index >= num_users ) {
-			printf("User doesn't exist\n");
-			break;
+	case UNSUBSCRIBE: {
+		if ((c = QF_consoleGetKey()) != 0) {
+			index = c - '0';
+			*r = FREE;
 		}
-
-		Core_Health::AO_Member[index]->postFIFO(Q_NEW(QEvt, Core_Health::UNSUBSCRIBE_SIG));
-		break;
-	}
-	case 'm': {
-		printf("m\n");
-		printf("Enter system ID ");
-		index = QF_consoleWaitForKey() - '0';
+		else break;
 		printf("%d\n", index);
 		if (index >= num_users) {
 			printf("User doesn't exist\n");
 			break;
 		}
-		printf("Enter number of periods to miss: ");
-		misses = QF_consoleWaitForKey() - '0';
-		printf("%d\n", misses);
-		Core_Health::MalfunctionEvt* e = Q_NEW(Core_Health::MalfunctionEvt, Core_Health::MALFUNCTION_SIG);
-		e->memberNum = index;
-		e->period_num = misses;
-		Core_Health::AO_Member[index]->postFIFO(e);
+
+
+		Core_Health::AO_Member[index]->postFIFO(Q_NEW(QEvt, Core_Health::UNSUBSCRIBE_SIG));
 		break;
 	}
-	default: {
-		break;
-	}
+	case MALFUNCTION: {
+		if ((c = QF_consoleGetKey()) != 0) {
+			index = c - '0';
+			
+			if (index >= num_users) {
+				printf("User doesn't exist\n");
+				*r = FREE;
+				break;
+			}
+			*r = MALFUNCTION_GET_MISSES;
+			printf("Enter number of periods to miss: ");
+			break;
+		}
+		else break;
 
 	}
+	case MALFUNCTION_GET_MISSES: {
+		if ((c = QF_consoleGetKey()) != 0) {
+			misses = c - '0';
+			printf("%d\n", misses);
+
+			Core_Health::MalfunctionEvt* e = Q_NEW(Core_Health::MalfunctionEvt, Core_Health::MALFUNCTION_SIG);
+			e->memberNum = index;
+			e->period_num = misses;
+			Core_Health::AO_Member[index]->postFIFO(e);
+			*r = FREE;
+			
+			break;
+		}
+		else break;
+		
+	}
+	}
 }
+//............................................................................
+	void QF_onClockTick(void) {
+		QF::TICK_X(0U, &Core_Health::l_clock_tick); // process time events at rate 0
+		static Request req = FREE;
+		QS_RX_INPUT(); // handle the QS-RX input
+		QS_OUTPUT();   // handle the QS output
+
+
+		if (req != FREE) {
+			Process(&req);
+			
+		}
+		else {
+		
+			switch (QF_consoleGetKey()) {
+			case '\33': { // ESC pressed?
+				Core_Health::BSP::terminate(0);
+				break;
+			}
+			case 'n': {
+				printf("n\n");
+				req = REGISTER;
+				printf("Enter ID\n");
+				break;
+			}
+
+			case 's': {
+				printf("s\n");
+				req = SUBSCRIBE;
+				printf("Enter system id");
+				break;
+			}
+			case 'u': {
+				printf("u\n");
+				req = UNSUBSCRIBE;
+				printf("Enter system id");
+				break;
+			}
+			case 'm': {
+				printf("m\n");
+				req = MALFUNCTION;
+				printf("Enter system ID ");
+				break;
+			}
+			default: {
+				req = FREE;
+				break;
+			}
+
+			}
+
+		}
+	}
 
 //----------------------------------------------------------------------------
 #ifdef Q_SPY

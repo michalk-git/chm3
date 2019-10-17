@@ -22,16 +22,16 @@ void WatchDog::WatchDogFunction() {
 		
 
 		//decrease the watchdog by the number of seconds calculated
-		wd.Decrement(dur.count());
+		wd.Decrement(dur);
 		//advance the 'last_time' variable by the number of seconds calculated
 		last_time += dur;
 
 		//make the thread go to sleep  for 500 msecs
 		std::this_thread::sleep_for(std::chrono::milliseconds(500));
 		/*used for debugging:*****************************************************************************************************************! TO BE REMOVED!*/
-		curr_wd = wd.GetCounter();
+		curr_wd = wd.GetCounter().count();
 		if (curr_wd != last_wd) {
-			std::cout << "wd = " << wd.GetCounter() << std::endl;
+			std::cout << "wd = " << wd.GetCounter().count() << std::endl;
 			last_wd = curr_wd;
 		}
 		/************************************************************************/
