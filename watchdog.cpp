@@ -4,17 +4,18 @@
 #include <thread>
 #include <ctime>
 #include "system.h"
+
 void WatchDog::WatchDogFunction() {
 
-	WatchDog& wd = WatchDog::getInstance();
+	WatchDog& wd = singleton<WatchDog>::getInstance();
 	int secs_in_dur = 0, last_wd = 0,curr_wd = 0;
 	std::chrono::duration<int> dur;
 	std::chrono::system_clock::time_point now;
-
+	
 	//find the start time of the thread and initialize the variable 'last_time'
 	std::chrono::system_clock::time_point last_time = std::chrono::system_clock::now();
 
-	while (1) {
+	while (wd.running) {
 		//find the current time : now
 		now = std::chrono::system_clock::now();
         //find the difference in time (ie duration) between now and last time in seconds time unit
@@ -23,6 +24,10 @@ void WatchDog::WatchDogFunction() {
 
 		//decrease the watchdog by the number of seconds calculated
 		wd.Decrement(dur);
+
+		//check if the watchdog's counter reached zero; if so, terminate
+		if (wd.counter.count() <= 0) std::terminate();
+
 		//advance the 'last_time' variable by the number of seconds calculated
 		last_time += dur;
 

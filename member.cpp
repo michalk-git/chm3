@@ -17,7 +17,7 @@ public:
 
 private:
 	int num_silent_cycles;
-	int system_id;
+
 public:
 	Member();
 
@@ -56,6 +56,12 @@ QP::QActive * const AO_Member[N_MEMBER] = { // "opaque" pointers to Member AO
     & Member::inst[4]
 };
 
+// helper function to provide the ID of Member "me"
+inline uint8_t MEMBER_ID(Member const* const me) {
+	return static_cast<uint8_t>(me - &Member::inst[0]);
+}
+
+
 } // namespace Core_Health
 //$enddef${AOs::AO_Member[N_Member]} ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 //$define${AOs::Member} vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -65,14 +71,13 @@ namespace Core_Health {
 	Member Member::inst[N_MEMBER];
 	//${AOs::Member::Member} .......................................................
 	Member::Member()
-		: QActive(&initial), num_silent_cycles(0), system_id(-1) {};
+		: QActive(&initial), num_silent_cycles(0){};
 		
 	
 
 	//${AOs::Member::SM} ..........................................................
 	Q_STATE_DEF(Member, initial) {
 		//${AOs::Member::SM::initial}
-		static bool registered = false; // starts off with 0, per C-standard
 		(void)e; // suppress the compiler warning about unused parameter
 
 		return tran(&active);
@@ -82,46 +87,44 @@ namespace Core_Health {
 		QP::QState status_;
 		switch (e->sig) {
 		case REQUEST_UPDATE_SIG: {
-			//if a member AO recevied a REQUEST_UPDATE_SIG it needs to post an ALIVE_SIG to the CHM AO with the member index
-			//unless the AO has received a malfunctioning signal. In that case the member AO will stay silent for the number of periods specified
+			//if a member AO recevied a REQUEST_UPDATE_SIG it needs to post an ALIVE_SIG to the CHM AO 
+			//with the member index unless the AO has received a malfunctioning signal.
+			//In that case the member AO will stay silent for the number of periods specified
 			if (num_silent_cycles == 0) {
 				Core_Health::MemberEvt* ae = Q_NEW(Core_Health::MemberEvt, ALIVE_SIG);
-				ae->memberNum = system_id;
+				ae->memberNum = MEMBER_ID(this);
 				AO_CHM->postFIFO(ae, this);
-				std::cout << "member " << system_id << " has sent ALIVE signal" <<std::endl;
+				std::cout << "member " << (int)MEMBER_ID(this) << " has sent ALIVE signal" <<std::endl;
 			}
 			else num_silent_cycles--;
 			status_ = Q_RET_HANDLED;
 			break;
 		}
 
-		case ACKNOWLEDGE_SIG: {
-            //if the member receives an ACKNOWLEGDE signal, it means he has been registered succeccfully into the system: the member needs to save the its system id
-			system_id = (Q_EVT_CAST(MemberEvt)->memberNum);
-			status_ = Q_RET_HANDLED;
-			break;
-		}
-
+        
 		case SUBSCRIBE_SIG: {
+			//all users who wish to subscribe to CHM system will subscribe to the REQUEST_UPDATE_SIG signal
 			subscribe(REQUEST_UPDATE_SIG);
-			//send chm AO a signal to notify the return of a subscriber
-			Core_Health::MemberEvt* ae = Q_NEW(Core_Health::MemberEvt, MEMBER_SIG);
-			ae->memberNum = system_id;
+			//send CHM system a message with the member ID to notify the return of a subscriber
+			Core_Health::MemberEvt* ae = Q_NEW(Core_Health::MemberEvt, SUBSCRIBE_SIG);
+			ae->memberNum = MEMBER_ID(this);
 			AO_CHM->postFIFO(ae, this);
 			std::cout << "member " << (int)ae->memberNum << " has subscribed" << std::endl;
 			status_ = Q_RET_HANDLED;
 			break;
 		}
 		case UNSUBSCRIBE_SIG: {
+			//users who wish to unsubscribe will stop receiving REQUEST_UPDATE_SIG signal
 			 unsubscribe(REQUEST_UPDATE_SIG);
 			 //send chm AO a signal to notify the leaving of a subscriber
-			 Core_Health::MemberEvt* ae = Q_NEW(Core_Health::MemberEvt, NOT_MEMBER_SIG);
-			 ae->memberNum = system_id;
+			 Core_Health::MemberEvt* ae = Q_NEW(Core_Health::MemberEvt, UNSUBSCRIBE_SIG);
+			 ae->memberNum = MEMBER_ID(this);
 			 AO_CHM->postFIFO(ae, this);
 			 std::cout << "member " << (int)ae->memberNum << " has unsubscribed" << std::endl;
 			 status_ = Q_RET_HANDLED;
 			 break;
 		}
+		//used for testing purposes
 		case MALFUNCTION_SIG: {
 			num_silent_cycles = (Q_EVT_CAST(MalfunctionEvt)->period_num);
 			status_ = Q_RET_HANDLED;

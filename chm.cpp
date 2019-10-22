@@ -30,8 +30,10 @@ namespace Core_Health {
 		QP::QTimeEvt timeEvt_kick;
 
 
-		int curr_members_num;           //curr_members_num is the total number of users (both subscribed and not)
-		
+		int curr_members_num;      //curr_members_num is the total number of users (both subscribed and not)
+		int curr_subscribers;      //curr_subscribers is the number of subscribed users
+		int curr_alive;            //curr_alive is the number of alive users (out of the subscribed users)
+
 		 WatchDog& wd ;
 
 		
@@ -68,11 +70,14 @@ namespace Core_Health {
 
 	//${AOs::CHM::CHM} .......................................................
 	CHM::CHM()
-		: QActive(&initial),wd(WatchDog::getInstance()) ,timeEvt_request_update(this,UPDATE_SIG,0U) ,timeEvt_kick(this,KICK_SIG,0U)
+		: QActive(&initial), wd(singleton<WatchDog>::getInstance()), timeEvt_request_update(this,UPDATE_SIG,0U)
+		  ,timeEvt_kick(this, KICK_SIG,0U)
 	{
-		//initialize the members array (the default setting is that there are no users)...
+		//the starting default is: there are mo users, no subscribers and no subscribers who are alive
 		curr_members_num = 0;
-
+		curr_subscribers = 0;
+		curr_alive = 0;
+		//initialize the members array (the default setting is that there are no users)...
 		for (int i = 0; i < N_MEMBER; i++) {
 			members[i].subscribed = false;
 			members[i].keep_alive_received = false;
@@ -93,7 +98,7 @@ namespace Core_Health {
 		
 		
 		//arm time event that fires  the signal KICK_SIG every T_UPDATE_WATCHDOG_SEC seconds
-		timeEvt_kick.armX(BSP::TICKS_PER_SEC * (CHMConfig_t::T_UPDATE_WATCHDOG_SEC), BSP::TICKS_PER_SEC * (CHMConfig_t::T_UPDATE_WATCHDOG_SEC));
+		timeEvt_kick.armX(BSP::TICKS_PER_SEC * (CHMConfig_t::T_UPDATE_WATCHDOG_SEC + 0.1 ), BSP::TICKS_PER_SEC * (CHMConfig_t::T_UPDATE_WATCHDOG_SEC + 0.1 ));
 		//arm time event that fires the signal UPDATE_SIG every T_AO_ALIVE_SEC seconds
 		timeEvt_request_update.armX(BSP::TICKS_PER_SEC * (CHMConfig_t::T_AO_ALIVE_SEC), BSP::TICKS_PER_SEC * (CHMConfig_t::T_AO_ALIVE_SEC));
 
@@ -109,21 +114,22 @@ namespace Core_Health {
 
 		case UPDATE_SIG: {
 			std::cout << "update" << std::endl;
-			//publish a time event with signal REQUEST_UPDATE_SIG; ie a signal published to all members 
-			//which will prompt an ALIVE_SIG from each member
+			//publish a time event with signal REQUEST_UPDATE_SIG; ie a signal published  
+			//which will prompt an ALIVE_SIG from each subscribed user
 			QP::QEvt* e = Q_NEW(QP::QEvt, REQUEST_UPDATE_SIG);
 			QP::QF::PUBLISH(e, this);
-			//check if the watchdogs's counter has reache zero; if so terminate the program
-			if (wd.GetCounter().count() <= 0) std::terminate();
+			//check if the watchdogs's counter has reache zero.
+			//if it has check if all subscribed users are alive; if so kick watchdog and don't terminate
+			//else terminate the program
+			//if (wd.GetCounter().count() <= 0) {
+				
+				//else std::terminate();
+			//}
 			status_ = Q_RET_HANDLED;
 			break;
 		}
 		case NEW_USER_SIG: {
-			//if received an NEW_USER_SIG CHM needs to enter the user to the members array 
-			//we also need to send an acknowledge signal to the member
-			MemberEvt* ev = Q_NEW(MemberEvt, Core_Health::ACKNOWLEDGE_SIG);
-			ev->memberNum = curr_members_num;
-			Core_Health::AO_Member[curr_members_num]->postFIFO(ev);
+			//if received an NEW_USER_SIG signal, CHM needs to enter the user's data to the members array: 
 			//update the members array to include the new user which by default will be unsubscribed
 			members[curr_members_num].id = (Q_EVT_CAST(UserEvt)->id);
 			members[curr_members_num].keep_alive_received = false;
@@ -132,27 +138,19 @@ namespace Core_Health {
 			break;
 		}
 		case ALIVE_SIG: {
-			//if received an ALIVE_SIG CHM needs to update the members array in the appropriate index.
+			//if received an ALIVE_SIG signal,CHM needs to update the members array in the appropriate index.
 			std::cout << "I'm alive" << std::endl;
+			//find which user has sent the ALIVE_SIG signal (ie the appropriate system id)
 			index = (Q_EVT_CAST(MemberEvt)->memberNum);
 			
 			//check if the user hasn't sent an ALIVE_SIG already: if he hasn't update the members array in 
 			//the appropriate index
 			if (members[index].keep_alive_received == false) {
 				members[index].keep_alive_received = true;
+				curr_alive++;
+				if (curr_alive == curr_subscribers) wd.kick();
+				//std::cout << "curr alive is " << curr_alive << std::endl;
 			}
-			bool kick = true;
-			//pass through AOs_alive array and check whether any subscribed members aren't responsive.
-			//if so refrain from kicking watchdog
-			for (int i = 0; i < curr_members_num; i++) {
-				//check for each user if he is both subscribed and non-active: if so update kick to false (to make sure the system doesn't kick watchdog) and print to error log
-				if ((members[i].subscribed == true) && (members[i].keep_alive_received == false) ) {
-					kick = false;
-					break;
-				}
-			}
-			if (kick == true) wd.kick();
-			
 	
 			status_ = Q_RET_HANDLED;
 			break;
@@ -165,26 +163,35 @@ namespace Core_Health {
 		}
 		
 		
-		case NOT_MEMBER_SIG: {
+		case UNSUBSCRIBE_SIG: {
 			//update subscribers array to show that a user has unsubscribed and decrease the number of
 			//subscribed members
+
 			index = (Q_EVT_CAST(MemberEvt)->memberNum);
 			if (members[index].subscribed == true) {
-				members[index].subscribed = false;		
-
+				members[index].subscribed = false;	
+				curr_subscribers--;
+				//check if the user has sent an ALIVE_SIG signal recently; if so we will set
+				//the keep_alive_received to false and decrease the number of live subscribers
+				if (members[index].keep_alive_received == true) {
+					members[index].keep_alive_received = false;
+					curr_alive--;
+				}
 			}
 
 			status_ = Q_RET_HANDLED;
 			break;
 		}
-		case MEMBER_SIG: {
+		case SUBSCRIBE_SIG: {
 			//update subscribers array to show that a user has subscribed 
 			index = (Q_EVT_CAST(MemberEvt)->memberNum);
 			if (members[index].subscribed == false) {
 				members[index].subscribed = true;
+				curr_subscribers++;
 				//the subscription is an ALIVE signal
 				members[index].keep_alive_received = true;
-
+				curr_alive++;
+				//std::cout << "has subscribed. curr_subs is " << curr_subscribers << std::endl;
 			}
 
 			status_ = Q_RET_HANDLED;
@@ -195,22 +202,20 @@ namespace Core_Health {
 		
 			QP::QEvt ev;
 			std::cout << "kick" << std::endl;
-			
-			
-			bool kick = true;
-			//pass through AOs_alive array and check whether any subscribed members aren't responsive.
-			//if so print to error log and refrain from kicking watchdog
-			for (int i = 0; i < curr_members_num ; i++) {
-                //check for each user if he is both subscribed and non-active: if so update kick to false (to make sure the system doesn't kick watchdog) and print to error log
-				if ((members[i].keep_alive_received == false) && (members[i].subscribed == true)) {
-					kick = false;
-					std::cout <<"Watchdog wasn't kicked because member id "<< members[i].id<< " didn't send ALIVE signal" <<std::endl;
-				}
-			}
-			if (kick == true) wd.kick();
+			//std::cout << "curr_alive is " << curr_alive << std::endl;
+			//std::cout << "curr_subs is " << curr_subscribers << std::endl;
 
-			//set the AOs_alive array back to default (false) for next cycle
-			for (int i = 0; i < curr_members_num ; i++) members[i].keep_alive_received = false;
+			//if all the subscribers have sent an ALIVE_SIG signal, kick the watchdog
+			if (curr_alive == curr_subscribers) wd.kick();
+
+			//for each user set the keep_alive_received to false for next cycle (and reset curr_alive)
+			for (int i = 0; i < curr_members_num; i++) {
+				if ((members[i].keep_alive_received == false) && (members[i].subscribed == true)) {
+					std::cout << "Watchdog wasn't kicked because member id " << members[i].id << " didn't send ALIVE signal" << std::endl;
+				}
+				members[i].keep_alive_received = false;
+			}
+			curr_alive = 0;
 			status_ = Q_RET_HANDLED;
 			break;
 		}
