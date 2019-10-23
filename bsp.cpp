@@ -157,17 +157,19 @@ void DeactivateHandler2(int index, int misses) {
 }
 
 bool GetInput(int& number) {
+	static bool valid_input = false;
 	// check if the user has entered a new key yet; if not we need to wait
 	int ch = QF_consoleGetKey();
 
 	// is_num variable checks whether the 'ch' character is a number
 	bool is_num = (((ch - '0') >= 0) && ((ch - '0') <= 9));
 
-	// if the user didn't enter a key are entered a key that isn't a number nothing will be done
+	// if the user didn't enter a key nothing will be done
 	if ((ch == NO_KEY) ) return false;
 
 	// if the user entered a number, we need to add it (as a digit) to the number entered up to this point 
 	else if (is_num) {
+		valid_input = true;
 		printf("%d", (ch - '0'));
 		number *= 10;
 		number += (ch - '0');
@@ -175,22 +177,28 @@ bool GetInput(int& number) {
 		
 	}
 
-	// if the user entered 'ENTER' we will return true - to signify the end of the input
-	else if(ch == ENTER_KEY) return true;
+	// if the user entered 'ENTER' we will return true - to signify the end of the input. But only if the input is valid; ie the user has entered a number previously
+	else if (ch == ENTER_KEY) {
+		if (!valid_input) printf("No number has been entered...try again\n");
+		else {
+			valid_input = false;
+			return true;
+		}
+	}
 	return false;
 }
 
 //............................................................................
 	void QF_onClockTick(void) {
 
-		static Request_t          req = FREE;             
-		int                       ch;
-		bool                      is_num = false;
-		static int                number = 0;
-		static std::map<int, int> id_to_index_dict;
-		static int                num_users = 0;  
-		static int                index = 0;
-		bool                      entry_ready = 0;
+static Request_t          req = FREE;             
+int                       ch;
+bool                      is_num = false;
+static int                number = 0;
+static std::map<int, int> id_to_index_dict;
+static int                num_users = 0;  
+static int                index = 0;
+bool                      entry_ready = 0;
 
 		QF::TICK_X(0U, &Core_Health::l_clock_tick); // process time events at rate 0
 		QS_RX_INPUT(); // handle the QS-RX input

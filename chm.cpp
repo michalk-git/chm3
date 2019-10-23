@@ -11,7 +11,7 @@
 Q_DEFINE_THIS_FILE
 
 using namespace Core_Health;
-
+#define KICK_SIGNAL_DELAY 0.1
 
 // Active object class -------------------------------------------------------
 //$declare${AOs::CHM} vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -98,7 +98,7 @@ namespace Core_Health {
 		
 		
 		//arm time event that fires  the signal KICK_SIG every T_UPDATE_WATCHDOG_SEC seconds
-		timeEvt_kick.armX(BSP::TICKS_PER_SEC * (CHMConfig_t::T_UPDATE_WATCHDOG_SEC + 0.1 ), BSP::TICKS_PER_SEC * (CHMConfig_t::T_UPDATE_WATCHDOG_SEC + 0.1 ));
+		timeEvt_kick.armX(BSP::TICKS_PER_SEC * (CHMConfig_t::T_UPDATE_WATCHDOG_SEC + KICK_SIGNAL_DELAY), BSP::TICKS_PER_SEC * (CHMConfig_t::T_UPDATE_WATCHDOG_SEC + KICK_SIGNAL_DELAY ));
 		//arm time event that fires the signal UPDATE_SIG every T_AO_ALIVE_SEC seconds
 		timeEvt_request_update.armX(BSP::TICKS_PER_SEC * (CHMConfig_t::T_AO_ALIVE_SEC), BSP::TICKS_PER_SEC * (CHMConfig_t::T_AO_ALIVE_SEC));
 
