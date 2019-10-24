@@ -26,7 +26,10 @@ void WatchDog::WatchDogFunction() {
 		wd.Decrement(dur);
 
 		//check if the watchdog's counter reached zero; if so, terminate
-		if (wd.counter.count() <= 0) std::terminate();
+		if (wd.counter.count() <= 0) {
+			printf("WatchDog reached zero- terminating...\n");
+			std::terminate();
+		}
 
 		//advance the 'last_time' variable by the number of seconds calculated
 		last_time += dur;

@@ -17,6 +17,7 @@ public:
 
 private:
 	int num_silent_cycles;
+	int system_id;
 
 public:
 	Member();
@@ -56,10 +57,7 @@ QP::QActive * const AO_Member[N_MEMBER] = { // "opaque" pointers to Member AO
     & Member::inst[4]
 };
 
-// helper function to provide the ID of Member "me"
-inline uint8_t MEMBER_ID(Member const* const me) {
-	return static_cast<uint8_t>(me - &Member::inst[0]);
-}
+
 
 
 } // namespace Core_Health
@@ -92,9 +90,9 @@ namespace Core_Health {
 			//In that case the member AO will stay silent for the number of periods specified
 			if (num_silent_cycles == 0) {
 				Core_Health::MemberEvt* ae = Q_NEW(Core_Health::MemberEvt, ALIVE_SIG);
-				ae->memberNum = MEMBER_ID(this);
+				ae->memberNum = system_id;
 				AO_CHM->postFIFO(ae, this);
-				std::cout << "member " << (int)MEMBER_ID(this) << " has sent ALIVE signal" <<std::endl;
+				std::cout << "member " << system_id << " has sent ALIVE signal" <<std::endl;
 			}
 			else num_silent_cycles--;
 			status_ = Q_RET_HANDLED;
@@ -103,13 +101,15 @@ namespace Core_Health {
 
         
 		case SUBSCRIBE_SIG: {
+			
 			//all users who wish to subscribe to CHM system will subscribe to the REQUEST_UPDATE_SIG signal
 			subscribe(REQUEST_UPDATE_SIG);
-			//send CHM system a message with the member ID to notify the return of a subscriber
-			Core_Health::MemberEvt* ae = Q_NEW(Core_Health::MemberEvt, SUBSCRIBE_SIG);
-			ae->memberNum = MEMBER_ID(this);
-			AO_CHM->postFIFO(ae, this);
-			std::cout << "member " << (int)ae->memberNum << " has subscribed" << std::endl;
+			//send CHM system a message with the member ID to notify about a new subscriber
+			//Core_Health::MemberEvt* ae = Q_NEW(Core_Health::MemberEvt, SUBSCRIBE_SIG);
+			//ae->memberNum = system_id;
+			//AO_CHM->postFIFO(ae, this);
+			system_id = (Q_EVT_CAST(MemberEvt)->memberNum);
+			std::cout << "member " << system_id << " has subscribed" << std::endl;
 			status_ = Q_RET_HANDLED;
 			break;
 		}
@@ -118,7 +118,7 @@ namespace Core_Health {
 			 unsubscribe(REQUEST_UPDATE_SIG);
 			 //send chm AO a signal to notify the leaving of a subscriber
 			 Core_Health::MemberEvt* ae = Q_NEW(Core_Health::MemberEvt, UNSUBSCRIBE_SIG);
-			 ae->memberNum = MEMBER_ID(this);
+			 ae->memberNum = system_id;
 			 AO_CHM->postFIFO(ae, this);
 			 std::cout << "member " << (int)ae->memberNum << " has unsubscribed" << std::endl;
 			 status_ = Q_RET_HANDLED;

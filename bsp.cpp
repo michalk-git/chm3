@@ -117,7 +117,7 @@ void RegisterHandler(int  user_id , int&  num_users, std::map<int,int>&  id_to_i
 	num_users++;
 
 	//create an event with the new user's id and post it to the CHM system
-	Core_Health::UserEvt* user_evt = Q_NEW(Core_Health::UserEvt, Core_Health::NEW_USER_SIG);
+	Core_Health::UserEvt* user_evt = Q_NEW(Core_Health::UserEvt, Core_Health::SUBSCRIBE_SIG);
 	user_evt->id = user_id;                                          
 	Core_Health::AO_CHM->postFIFO(user_evt);
 	return;
@@ -250,19 +250,20 @@ bool                      entry_ready = 0;
 				Core_Health::BSP::terminate(0);
 				break;
 			}
-			case 'n': {
-				printf("n\n");
+			case 's': {
+				printf("s\n");
 				req = REGISTER;
 				printf("Enter ID\n");
 				break;
 			}
-
+/*
 			case 's': {
 				printf("s\n");
 				req = SUBSCRIBE;
 				printf("Enter system id\n");
 				break;
 			}
+			*/
 			case 'u': {
 				printf("u\n");
 				req = UNSUBSCRIBE;

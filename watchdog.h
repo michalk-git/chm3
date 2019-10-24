@@ -22,10 +22,10 @@ class WatchDog {
 	bool running;
 public:
 	
-	void start() {
+	void start(int reset_value_in_secs) {
 		if (running == false) {
 			running = true;
-			counter = std::chrono::seconds(Core_Health::CHMConfig_t::T_WATCHDOG_RESET_SEC);
+			counter = std::chrono::seconds(reset_value_in_secs);
 			watchdog_thread = std::thread(&WatchDogFunction);
 		}
 	}
