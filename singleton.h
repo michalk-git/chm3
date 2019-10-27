@@ -3,8 +3,8 @@
 template<class T>
 class singleton{
 
-protected:
 	singleton() = default;
+
 public:
 	static T& getInstance()
 	{

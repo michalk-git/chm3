@@ -3,56 +3,61 @@
 #define WD_CPP_
 
 
-
 #include <thread>
 #include "system.h"
 #include "singleton.h"
 #include <mutex>
 #include <chrono>
 
+using namespace std;
+using namespace chrono;
+using namespace Core_Health;
 
 
 class WatchDog {
-	std::chrono::duration<int> counter;
-	std::thread watchdog_thread;
-	static void WatchDogFunction();
-	std::mutex mtx;
-	WatchDog() : counter(Core_Health::CHMConfig_t::T_WATCHDOG_RESET_SEC),running(false) {};
+	duration<int>     counter;
+	thread            watchdog_thread;
+	static void       WatchDogFunction();
+	mutex             mtx;
+	bool              is_running;
+
+	WatchDog() : counter(CHMConfig_t::T_WATCHDOG_RESET_SEC), is_running(false){};
 	friend singleton<WatchDog>;
-	bool running;
+	
 public:
 	
-	void start(int reset_value_in_secs) {
-		if (running == false) {
-			running = true;
-			counter = std::chrono::seconds(reset_value_in_secs);
-			watchdog_thread = std::thread(&WatchDogFunction);
+	void Start(int reset_value_in_secs){
+		if (is_running == false) {
+			is_running = true;
+			counter = seconds(reset_value_in_secs);
+			watchdog_thread = thread(&WatchDogFunction);
 		}
 	}
 	
-	void stop() {
-		if (running == true) {
+	void Stop(){
+		if (is_running == true) {
 			watchdog_thread.join();
-			running = false;
+			is_running = false;
 		}
 	}
-	void kick() {
-		std::lock_guard<std::mutex> lg(mtx);
-		counter = std::chrono::duration<int>(Core_Health::CHMConfig_t::T_WATCHDOG_RESET_SEC);
-	}
-	void SetResetInterval(unsigned int interval) {
-		Core_Health::CHMConfig_t::T_WATCHDOG_RESET_SEC = interval;
-	}
-	void Decrement(std::chrono::duration<int> amount) {
-		std::lock_guard<std::mutex> lg(mtx);
-		counter -= (amount);
 
+	void Kick(){
+		lock_guard<mutex> lock(mtx);
+		counter = duration<int>(CHMConfig_t::T_WATCHDOG_RESET_SEC);
 	}
-	std::chrono::duration<int> GetCounter()const {
+
+	void SetResetInterval(unsigned int new_reset_interval){
+		CHMConfig_t::T_WATCHDOG_RESET_SEC = new_reset_interval;
+	}
+
+	void DecrementCounter(duration<int> amount) {
+		lock_guard<mutex> lock(mtx);
+		counter -= (amount);
+	}
+
+	duration<int> GetCounterDurationInSecs()const{
 		return counter;
 	}
-
-	//singleton<WatchDog> watchdog;
 
 };
 

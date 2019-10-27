@@ -10,8 +10,8 @@ using namespace Core_Health;
 int main(int argc, char *argv[]) {
     static QP::QEvt const *chmQueueSto[N_MEMBER];
     static QP::QEvt const *memberQueueSto[N_MEMBER][N_MEMBER];
-    static QP::QSubscrList subscrSto[Core_Health::MAX_PUB_SIG];
-    static QF_MPOOL_EL(Core_Health::MemberEvt) smlPoolSto[2*N_MEMBER];
+    static QP::QSubscrList subscrSto[MAX_PUB_SIG];
+    static QF_MPOOL_EL(MemberEvt) smlPoolSto[2*N_MEMBER];
 
     QP::QF::init();  // initialize the framework and the underlying RT kernel
 
@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
                            (void *)0, 0U);
     }
 	
-    AO_CHM->start((uint8_t)(N_MEMBER + 1U),
+    AO_HealthMonitor->start((uint8_t)(N_MEMBER + 1U),
                     chmQueueSto, Q_DIM(chmQueueSto),
                     (void *)0, 0U);
 

@@ -26,8 +26,7 @@ static uint32_t l_rnd; // random seed
 
 //............................................................................
 void BSP::init(int argc, char **argv) {
-    printf("Press n to create account\n"
-		   "Press s to subscribe\n"
+    printf("Press s to subscribe\n"
   		   "Press u to unsubscribe\n"
            "Press ESC to quit...\n" );
 
@@ -79,9 +78,8 @@ void QF::onCleanup(void) {  // cleanup callback
 
 
 typedef enum {
-	FREE,
+	IDLE,
 	SUBSCRIBE,
-	REGISTER,
 	UNSUBSCRIBE,
 	DEACTIVATE,
 	DEACTIVATE_GET_MISSES
@@ -94,64 +92,28 @@ enum {
 
 
 
-void RegisterHandler(int  user_id , int&  num_users, std::map<int,int>&  id_to_index_dict) {
-	//check if the user is already in the system
-	bool user_in_sys = (id_to_index_dict.find(user_id) != id_to_index_dict.end());
-
-	//if the user is already in the system we will print error and return
-	if (user_in_sys) {             
-		printf("User already exists\n");
-		return;
-	}
-
-	//check if we reached the maximum amount of users
-	if(num_users >= N_MEMBER) {
-		printf("Reached maximum number of users\n");
-		return;
-	}
-
-	//add the key-value pair of id-index to the id_to_index dictionary, increase the users count and print out the user's id
-	printf("Your system id is %d\n", num_users);
-	//add the new user to the system dictionary
-	id_to_index_dict[user_id] = num_users;                           
-	num_users++;
+void SubscribeHandler(int user_id) {
 
 	//create an event with the new user's id and post it to the CHM system
-	Core_Health::UserEvt* user_evt = Q_NEW(Core_Health::UserEvt, Core_Health::SUBSCRIBE_SIG);
+	RegisterNewUserEvt* user_evt = Q_NEW(RegisterNewUserEvt, SUBSCRIBE_SIG);
 	user_evt->id = user_id;                                          
-	Core_Health::AO_CHM->postFIFO(user_evt);
+	AO_HealthMonitor->postFIFO(user_evt);
 	return;
 }
 
-void SubscriptionHandler(int index, int num_users, bool subscribe) {
-
-	// check if index represents an existing user; if not, print error
-	if (index >= num_users) {                               
-		printf("User doesn't exist\n");
-		return;
-	}
-
-	// if it is an existing user, notify the CHM system in order to subscribe/unsubscibe user
-	if(subscribe) Core_Health::AO_Member[index]->postFIFO(Q_NEW(QEvt, Core_Health::SUBSCRIBE_SIG));
-	else Core_Health::AO_Member[index]->postFIFO(Q_NEW(QEvt, Core_Health::UNSUBSCRIBE_SIG));
+void UnSubscribeHandler(int index) {
+	 AO_Member[index]->postFIFO(Q_NEW(QEvt, UNSUBSCRIBE_SIG));
+	 return;
 }
 
-void DeactivateHandler(int index, int num_users) {
-	// check if index represents an existing user; if not, print error
-	if (index >= num_users) {
-		printf("User doesn't exist\n");
-		return;
-	}
 
-	printf("Enter number of periods to miss: ");	
-}
 
-void DeactivateHandler2(int index, int misses) {
+void DeactivateHandler(int index, int misses) {
 	// create new event to notify the appropriate member and post it
-	Core_Health::MalfunctionEvt* evt = Q_NEW(Core_Health::MalfunctionEvt, Core_Health::MALFUNCTION_SIG);
+	DeactivationEvt* evt = Q_NEW(DeactivationEvt, DEACTIVATE_SIG);
 	evt->memberNum = index;
 	evt->period_num = misses;
-	Core_Health::AO_Member[index]->postFIFO(evt);
+	AO_Member[index]->postFIFO(evt);
 
 	printf("Member %d is deactivated for %d cycles\n ", index,  misses);
 }
@@ -191,52 +153,47 @@ bool GetInput(int& number) {
 //............................................................................
 	void QF_onClockTick(void) {
 
-static Request_t          req = FREE;             
-int                       ch;
-bool                      is_num = false;
-static int                number = 0;
-static std::map<int, int> id_to_index_dict;
-static int                num_users = 0;  
-static int                index = 0;
-bool                      entry_ready = 0;
+    static Request_t          request = IDLE;
+    int                       ch;
+    bool                      is_num = false;
+    static int                number = 0;
+    static std::map<int, int> id_to_index_dict;
+    static int                index = 0;
+    bool                      entry_ready = 0;
 
 		QF::TICK_X(0U, &Core_Health::l_clock_tick); // process time events at rate 0
 		QS_RX_INPUT(); // handle the QS-RX input
 		QS_OUTPUT();   // handle the QS output
 
 		//check if we're in the middle of a request (ie we need to receive more input to complete request)
-		if (req != FREE) {
+		if (request != IDLE) {
 			//First get the user's input on character at a time
 			entry_ready = GetInput(number);
 			//the subroutine will return if the entry isn't ready yet
 			if (entry_ready == false) return;
 
-			//we recieved the user's input and need to process it according to the current request
-			if (req == REGISTER) {
+			// Reaching this line means we finished receiving the user's input and need to process it according to the current request
+			if (request == SUBSCRIBE) {
 				//add new user
-				RegisterHandler(number, num_users, id_to_index_dict);
-				req = FREE;
+				SubscribeHandler(number);
+				request = IDLE;
 			}
-			else if (req == SUBSCRIBE) {
-				//subscribe user
-				SubscriptionHandler(number, num_users, true);
-				req = FREE;
-			}
-			else if (req == UNSUBSCRIBE) {
+			
+			else if (request == UNSUBSCRIBE) {
 				//unsubscribe user
-				SubscriptionHandler(number, num_users, false);
-				req = FREE;
+				UnSubscribeHandler(number);
+				request = IDLE;
 			}
-			else if (req == DEACTIVATE) {
+			else if (request == DEACTIVATE) {
 				//used for testing
-				DeactivateHandler(number, num_users);
-				req = DEACTIVATE_GET_MISSES;
+				printf("Enter number of periods to miss: ");
+				request = DEACTIVATE_GET_MISSES;
 				index = number;
 			}
-			else if (req == DEACTIVATE_GET_MISSES) {
+			else if (request == DEACTIVATE_GET_MISSES) {
 				//used for testing
-				DeactivateHandler2(index,number);
-				req = FREE;
+				DeactivateHandler(index,number);
+				request = IDLE;
 				index = 0;
 			}
 			number = 0;
@@ -252,32 +209,25 @@ bool                      entry_ready = 0;
 			}
 			case 's': {
 				printf("s\n");
-				req = REGISTER;
-				printf("Enter ID\n");
+				request = SUBSCRIBE;
+				printf("Enter id\n");
 				break;
 			}
-/*
-			case 's': {
-				printf("s\n");
-				req = SUBSCRIBE;
-				printf("Enter system id\n");
-				break;
-			}
-			*/
+
 			case 'u': {
 				printf("u\n");
-				req = UNSUBSCRIBE;
+				request = UNSUBSCRIBE;
 				printf("Enter system id\n");
 				break;
 			}
 			case 'd': {
 				printf("d\n");
-				req = DEACTIVATE;
+				request = DEACTIVATE;
 				printf("Enter system id\n");
 				break;
 			}
 			default: {
-				req = FREE;
+				request = IDLE;
 				break;
 			}
 

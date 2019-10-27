@@ -5,42 +5,52 @@
 #include <ctime>
 #include "system.h"
 
+using namespace std;
+using namespace std::chrono;
+
 void WatchDog::WatchDogFunction() {
 
-	WatchDog& wd = singleton<WatchDog>::getInstance();
-	int secs_in_dur = 0, last_wd = 0,curr_wd = 0;
-	std::chrono::duration<int> dur;
-	std::chrono::system_clock::time_point now;
+	WatchDog&                watchdog_instance = singleton<WatchDog>::getInstance();
+	int                      last_counter_value = 0;
+	int                      curr_counter_value = 0;
+	duration<int>            time_diff;
+	system_clock::time_point now;
+	bool                     watchdog_reached_zero = false;
 	
 	//find the start time of the thread and initialize the variable 'last_time'
-	std::chrono::system_clock::time_point last_time = std::chrono::system_clock::now();
+	system_clock::time_point last_time = system_clock::now();
 
-	while (wd.running) {
+	while (watchdog_instance.is_running) {
+
 		//find the current time : now
-		now = std::chrono::system_clock::now();
+		now = system_clock::now();
+
         //find the difference in time (ie duration) between now and last time in seconds time unit
-		dur = std::chrono::duration_cast<std::chrono::seconds>(now - last_time);
+		time_diff = duration_cast<seconds>(now - last_time);
 		
 
 		//decrease the watchdog by the number of seconds calculated
-		wd.Decrement(dur);
+		watchdog_instance.DecrementCounter(time_diff);
 
 		//check if the watchdog's counter reached zero; if so, terminate
-		if (wd.counter.count() <= 0) {
+		watchdog_reached_zero = (watchdog_instance.counter.count() <= 0);
+
+		if (watchdog_reached_zero) {
 			printf("WatchDog reached zero- terminating...\n");
 			std::terminate();
 		}
 
 		//advance the 'last_time' variable by the number of seconds calculated
-		last_time += dur;
+		last_time += time_diff;
 
 		//make the thread go to sleep  for 500 msecs
-		std::this_thread::sleep_for(std::chrono::milliseconds(500));
+		this_thread::sleep_for(milliseconds(500));
+
 		/*used for debugging:*****************************************************************************************************************! TO BE REMOVED!*/
-		curr_wd = wd.GetCounter().count();
-		if (curr_wd != last_wd) {
-			std::cout << "wd = " << wd.GetCounter().count() << std::endl;
-			last_wd = curr_wd;
+		curr_counter_value = watchdog_instance.GetCounterDurationInSecs().count();
+		if (curr_counter_value != last_counter_value) {
+			cout << "wd = " << curr_counter_value << endl;
+			last_counter_value = curr_counter_value;
 		}
 		/************************************************************************/
 	}
