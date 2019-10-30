@@ -191,6 +191,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bsp.h" />
+    <ClInclude Include="chm.h" />
     <ClInclude Include="singleton.h" />
     <ClInclude Include="system.h" />
     <ClInclude Include="watchdog.h" />

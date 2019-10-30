@@ -8,7 +8,7 @@
 using namespace std;
 using namespace std::chrono;
 
-void WatchDog::WatchDogFunction() {
+void WatchDog::WatchDogCountDown() {
 
 	WatchDog&                watchdog_instance = singleton<WatchDog>::getInstance();
 	int                      last_counter_value = 0;
@@ -28,13 +28,11 @@ void WatchDog::WatchDogFunction() {
         //find the difference in time (ie duration) between now and last time in seconds time unit
 		time_diff = duration_cast<seconds>(now - last_time);
 		
-
 		//decrease the watchdog by the number of seconds calculated
 		watchdog_instance.DecrementCounter(time_diff);
 
 		//check if the watchdog's counter reached zero; if so, terminate
 		watchdog_reached_zero = (watchdog_instance.counter.count() <= 0);
-
 		if (watchdog_reached_zero) {
 			printf("WatchDog reached zero- terminating...\n");
 			std::terminate();

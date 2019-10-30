@@ -78,9 +78,9 @@ namespace Core_Health {
 	Q_STATE_DEF(Member, initial) {
 		//${AOs::Member::SM::initial}
 		(void)e; // suppress the compiler warning about unused parameter
-
 		return tran(&active);
 	}
+
 	//${AOs::Member::SM::active} ................................................
 	Q_STATE_DEF(Member, active) {
 		QP::QState status_;
@@ -88,9 +88,9 @@ namespace Core_Health {
 		case REQUEST_UPDATE_SIG: {
 			//if a member AO recevied a REQUEST_UPDATE_SIG it needs to post an ALIVE_SIG to the HealthMonitor active object unless it has been deactivated
 			if (num_deactivated_cycles == 0) {
-				MemberEvt* member_evt = Q_NEW(MemberEvt, ALIVE_SIG);
-				member_evt->memberNum = system_id;
-				AO_HealthMonitor->postFIFO(member_evt, this);
+				MemberEvt* alive_evt = Q_NEW(MemberEvt, ALIVE_SIG);
+				alive_evt->memberNum = system_id;
+				AO_HealthMonitor->postFIFO(alive_evt, this);
 				cout << "member " << system_id << " has sent ALIVE signal" <<endl;
 			}
 			else num_deactivated_cycles--;

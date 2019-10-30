@@ -14,5 +14,6 @@
     <ClInclude Include="system.h" />
     <ClInclude Include="watchdog.h" />
     <ClInclude Include="singleton.h" />
+    <ClInclude Include="chm.h" />
   </ItemGroup>
 </Project>
