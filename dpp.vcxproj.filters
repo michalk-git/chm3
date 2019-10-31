@@ -8,6 +8,7 @@
     <ClCompile Include="chm.cpp" />
     <ClCompile Include="watchdog.cpp" />
     <ClCompile Include="system.cpp" />
+    <ClCompile Include="RegistrationHandler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bsp.h" />
@@ -15,5 +16,6 @@
     <ClInclude Include="watchdog.h" />
     <ClInclude Include="singleton.h" />
     <ClInclude Include="chm.h" />
+    <ClInclude Include="RegistrationHandler.h" />
   </ItemGroup>
 </Project>

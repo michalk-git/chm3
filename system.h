@@ -2,6 +2,7 @@
 #ifndef Core_Health_h
 #define Core_Health_h
 #include "qpcpp.h"
+#define NONE (-1)
 
 namespace Core_Health {
 	struct CHMConfig_t {
@@ -29,14 +30,19 @@ enum Core_HealthSignals {
 
 
 
-struct User{
-	int id ;
-	bool subscribed;
-	bool keep_alive_received;
-};
 } // namespace Core_Health
 
 
+struct User {
+	int id;
+	bool keep_alive_received;
+
+	User() {
+		id = NONE;
+		keep_alive_received = false;
+	}
+
+};
 namespace Core_Health {
 
 class MemberEvt : public QP::QEvt {
