@@ -102,7 +102,9 @@ void SubscribeHandler(int user_id) {
 }
 
 void UnSubscribeHandler(int index) {
-	 AO_Member[index]->postFIFO(Q_NEW(QEvt, UNSUBSCRIBE_SIG));
+	MemberEvt* user_evt = Q_NEW(MemberEvt, UNSUBSCRIBE_SIG);
+	user_evt->memberNum = index;
+	AO_HealthMonitor->postFIFO(user_evt);
 	 return;
 }
 

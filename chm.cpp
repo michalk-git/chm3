@@ -5,14 +5,13 @@
 #include <iostream>
 #include "watchdog.h"
 #include <chrono>
-#include <map>
 #include "chm.h"
 #include "RegistrationHandler.h"
 
 Q_DEFINE_THIS_FILE
 using namespace std;
 using namespace Core_Health;
-#define KICK_SIGNAL_DELAY 0.05
+#define KICK_SIGNAL_DELAY 0.01
 
 
 
@@ -92,32 +91,39 @@ namespace Core_Health {
 			index = (Q_EVT_CAST(MemberEvt)->memberNum);
 			//update the members array with the new ALIVE signal
 			subscription_handler.UpdateAliveStatus(index);
-			// if all the subscribers are alive, kick the watchdog
-			if (subscription_handler.AreAllMembersAlive() == true) watchdog_instance.Kick();
+			// if all of the subscribers are alive, kick the watchdog
+			if (subscription_handler.AreAllMembersResponsive() == true) watchdog_instance.Kick();
 			status_ = Q_RET_HANDLED;
 			break;
 		}
         
 		case SUBSCRIBE_SIG: {
 			int user_id = (int)(Q_EVT_CAST(RegisterNewUserEvt)->id);
-			int index = -1;
+			int new_sys_id = -1;
 
 			// subscribe the user (if there is free space)
-			index = subscription_handler.SubscribeUser(user_id);
-			if (index != -1) {
-				//if we succedded in registering the new user we need notify the associated AO_Member
+			new_sys_id = subscription_handler.SubscribeUser(user_id);
+			if (new_sys_id != -1) {
+				//if we succeded in registering the new user we need notify the associated AO_Member
 				MemberEvt* member_evt = Q_NEW(MemberEvt, SUBSCRIBE_SIG);
-				member_evt->memberNum = index;
-				AO_Member[index]->postFIFO(member_evt);
+				member_evt->memberNum = new_sys_id;
+				AO_Member[new_sys_id]->postFIFO(member_evt);
 			}
 			status_ = Q_RET_HANDLED;
 			break;
 		}
 
 		case UNSUBSCRIBE_SIG: {
+			bool unsubscribed_successfully = false;
 			// find the system id (ie index in members array) of the member to unsubscribe
 			int sys_id = (Q_EVT_CAST(MemberEvt)->memberNum);
-			subscription_handler.UnSubscribeUser(sys_id);
+			unsubscribed_successfully = subscription_handler.UnSubscribeUser(sys_id);
+			if (unsubscribed_successfully) {
+				//if we succeded in unsubscribing we need notify the associated AO_Member
+				QP::QEvt* member_evt = Q_NEW(QP::QEvt, UNSUBSCRIBE_SIG);
+				AO_Member[sys_id]->postFIFO(member_evt);
+			}
+
 			status_ = Q_RET_HANDLED;
 			break;
 		}
@@ -125,8 +131,8 @@ namespace Core_Health {
 		case KICK_SIG: {
 			cout << "kick" << endl;
 			//if all the subscribers have sent an ALIVE_SIG signal, kick the watchdog
-			if ((subscription_handler.AreAllMembersAlive() == true)) watchdog_instance.Kick();
-			// we need to log if users aren't active and then reset the system for the next cycle
+			if ((subscription_handler.AreAllMembersResponsive() == true)) watchdog_instance.Kick();
+			// we need to print to log if users aren't active and then reset the system for the next cycle
 			subscription_handler.LogUnResponsiveUsersAndReset();
 
 			status_ = Q_RET_HANDLED;

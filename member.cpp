@@ -111,11 +111,8 @@ namespace Core_Health {
 		case UNSUBSCRIBE_SIG: {
 			//users who wish to unsubscribe will stop receiving REQUEST_UPDATE_SIG signal
 			 unsubscribe(REQUEST_UPDATE_SIG);
-			 //send the health monitor active object a signal to notify the leaving of a subscriber
-			 MemberEvt* member_evt = Q_NEW(MemberEvt, UNSUBSCRIBE_SIG);
-			 member_evt->memberNum = system_id;
-			 AO_HealthMonitor->postFIFO(member_evt, this);
-			 cout << "member " << (int)member_evt->memberNum << " has unsubscribed" << endl;
+
+			 cout << "member " << system_id << " has unsubscribed" << endl;
 			 status_ = Q_RET_HANDLED;
 			 break;
 		}
