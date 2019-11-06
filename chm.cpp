@@ -6,7 +6,7 @@
 #include "watchdog.h"
 #include <chrono>
 #include "chm.h"
-#include "RegistrationHandler.h"
+#include "SubscriptionHandler.h"
 
 Q_DEFINE_THIS_FILE
 using namespace std;
@@ -77,7 +77,10 @@ namespace Core_Health {
 
 		switch (e->sig) {
 		case UPDATE_SIG: {
+			bool no_users_in_sys = (subscription_handler.GetNumberOfMembers() == 0);
 			cout << "update" << endl;
+			// if there are no subscribers, kick the watchdog
+			if (no_users_in_sys) watchdog_instance.Kick();
 			//publish signal REQUEST_UPDATE_SIG 
 			QP::QEvt* update_evt = Q_NEW(QP::QEvt, REQUEST_UPDATE_SIG);
 			QP::QF::PUBLISH(update_evt, this);
@@ -130,8 +133,8 @@ namespace Core_Health {
 
 		case KICK_SIG: {
 			cout << "kick" << endl;
-			//if all the subscribers have sent an ALIVE_SIG signal, kick the watchdog
-			if ((subscription_handler.AreAllMembersResponsive() == true)) watchdog_instance.Kick();
+			// kick the watchdog if all of the subscribers are alive
+			if (subscription_handler.AreAllMembersResponsive() == true) watchdog_instance.Kick();
 			// we need to print to log if users aren't active and then reset the system for the next cycle
 			subscription_handler.LogUnResponsiveUsersAndReset();
 

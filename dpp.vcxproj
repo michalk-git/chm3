@@ -186,15 +186,15 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="member.cpp" />
     <ClCompile Include="chm.cpp" />
-    <ClCompile Include="RegistrationHandler.cpp" />
+    <ClCompile Include="SubscriptionHandler.cpp" />
     <ClCompile Include="system.cpp" />
     <ClCompile Include="watchdog.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="bsp.h" />
     <ClInclude Include="chm.h" />
-    <ClInclude Include="RegistrationHandler.h" />
     <ClInclude Include="singleton.h" />
+    <ClInclude Include="SubscriptionHandler.h" />
     <ClInclude Include="system.h" />
     <ClInclude Include="watchdog.h" />
   </ItemGroup>
