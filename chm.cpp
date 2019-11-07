@@ -22,7 +22,7 @@ namespace Core_Health {
 
 	private:
 		 
-		SubscriptionHandler subscription_handler;
+		SubscriptionHandler& subscription_handler;
 		WatchDog&           watchdog_instance;
 		QP::QTimeEvt        timeEvt_request_update;
 		QP::QTimeEvt        timeEvt_kick;
@@ -52,7 +52,8 @@ namespace Core_Health {
 
 	HealthMonitor HealthMonitor::inst;
 
-	HealthMonitor::HealthMonitor(): QActive(&initial), watchdog_instance(singleton<WatchDog>::getInstance()), timeEvt_request_update(this, UPDATE_SIG, 0U), timeEvt_kick(this, KICK_SIG, 0U){
+	HealthMonitor::HealthMonitor(): QActive(&initial), watchdog_instance(singleton<WatchDog>::getInstance()), subscription_handler(singleton<SubscriptionHandler>::getInstance()),
+		timeEvt_request_update(this, UPDATE_SIG, 0U), timeEvt_kick(this, KICK_SIG, 0U){
 
 		//start the watchdog
 		watchdog_instance.Start(CHMConfig_t::T_WATCHDOG_RESET_SEC);

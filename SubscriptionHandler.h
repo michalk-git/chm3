@@ -1,9 +1,10 @@
 #pragma once
 #include "system.h"
-
+#include <mutex>
+using namespace std;
 class SubscriptionHandler {
 	User members[N_MEMBER];
-	
+	mutex         mtx;
 
 public:
 	SubscriptionHandler() = default;
