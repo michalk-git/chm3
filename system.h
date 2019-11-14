@@ -2,7 +2,7 @@
 #ifndef Core_Health_h
 #define Core_Health_h
 #include "qpcpp.h"
-#define NONE (-1)
+#define UNIDENTIFIED_ID (-1)
 
 namespace Core_Health {
 	struct CHMConfig_t {
@@ -38,7 +38,7 @@ struct User {
 	bool keep_alive_received;
 
 	User() {
-		id = NONE;
+		id = UNIDENTIFIED_ID;
 		keep_alive_received = false;
 	}
 

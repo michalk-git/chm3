@@ -1,4 +1,4 @@
 #pragma once
 namespace Core_Health {
-	float ConvertSecondsToTicks(float seconds);
+	QP::QTimeEvtCtr ConvertSecondsToTicks(unsigned int seconds);
 }

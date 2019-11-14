@@ -11,7 +11,7 @@
 Q_DEFINE_THIS_FILE
 using namespace std;
 using namespace Core_Health;
-#define KICK_SIGNAL_DELAY 0.01
+#define KICK_SIGNAL_DELAY 1
 
 
 
@@ -22,7 +22,7 @@ namespace Core_Health {
 
 	private:
 		 
-		SubscriptionHandler& subscription_handler;
+		SubscriptionHandler subscription_handler;
 		WatchDog&           watchdog_instance;
 		QP::QTimeEvt        timeEvt_request_update;
 		QP::QTimeEvt        timeEvt_kick;
@@ -52,7 +52,7 @@ namespace Core_Health {
 
 	HealthMonitor HealthMonitor::inst;
 
-	HealthMonitor::HealthMonitor(): QActive(&initial), watchdog_instance(singleton<WatchDog>::getInstance()), subscription_handler(singleton<SubscriptionHandler>::getInstance()),
+	HealthMonitor::HealthMonitor(): QActive(&initial), watchdog_instance(singleton<WatchDog>::getInstance()),
 		timeEvt_request_update(this, UPDATE_SIG, 0U), timeEvt_kick(this, KICK_SIG, 0U){
 
 		//start the watchdog
@@ -64,7 +64,7 @@ namespace Core_Health {
 		(void)e; // suppress the compiler warning about unused parameter
 
 		//arm time event that fires  the signal KICK_SIG every T_UPDATE_WATCHDOG_SEC seconds
-		timeEvt_kick.armX(ConvertSecondsToTicks((CHMConfig_t::T_UPDATE_WATCHDOG_SEC) + KICK_SIGNAL_DELAY), ConvertSecondsToTicks((CHMConfig_t::T_UPDATE_WATCHDOG_SEC) + KICK_SIGNAL_DELAY));
+		timeEvt_kick.armX(ConvertSecondsToTicks((CHMConfig_t::T_UPDATE_WATCHDOG_SEC)) + KICK_SIGNAL_DELAY, ConvertSecondsToTicks((CHMConfig_t::T_UPDATE_WATCHDOG_SEC)) + KICK_SIGNAL_DELAY);
 		//arm time event that fires the signal UPDATE_SIG every T_AO_ALIVE_SEC seconds
 		timeEvt_request_update.armX(ConvertSecondsToTicks(CHMConfig_t::T_AO_ALIVE_SEC), ConvertSecondsToTicks(CHMConfig_t::T_AO_ALIVE_SEC));
 
@@ -74,7 +74,6 @@ namespace Core_Health {
 	//${AOs::HealthMonitor::SM::active} ..................................................
 	Q_STATE_DEF(HealthMonitor, active) {
 		QP::QState status_;
-		int index = -1;
 
 		switch (e->sig) {
 		case UPDATE_SIG: {
@@ -92,7 +91,7 @@ namespace Core_Health {
 		case ALIVE_SIG: {
 			cout << "I'm alive" << endl;
 			//find which user has sent the ALIVE_SIG signal (ie the appropriate system id)
-			index = (Q_EVT_CAST(MemberEvt)->memberNum);
+			int index = (Q_EVT_CAST(MemberEvt)->memberNum);
 			//update the members array with the new ALIVE signal
 			subscription_handler.UpdateAliveStatus(index);
 			// if all of the subscribers are alive, kick the watchdog
@@ -103,16 +102,17 @@ namespace Core_Health {
         
 		case SUBSCRIBE_SIG: {
 			int user_id = (int)(Q_EVT_CAST(RegisterNewUserEvt)->id);
-			int new_sys_id = -1;
+			int new_sys_id = INVALID_ID;
 
 			// subscribe the user (if there is free space)
 			new_sys_id = subscription_handler.SubscribeUser(user_id);
-			if (new_sys_id != -1) {
+			if (new_sys_id != INVALID_ID) {
 				//if we succeded in registering the new user we need notify the associated AO_Member
 				MemberEvt* member_evt = Q_NEW(MemberEvt, SUBSCRIBE_SIG);
 				member_evt->memberNum = new_sys_id;
 				AO_Member[new_sys_id]->postFIFO(member_evt);
 			}
+			else printf("Subscribing didn't succeed\n");
 			status_ = Q_RET_HANDLED;
 			break;
 		}
@@ -127,7 +127,7 @@ namespace Core_Health {
 				QP::QEvt* member_evt = Q_NEW(QP::QEvt, UNSUBSCRIBE_SIG);
 				AO_Member[sys_id]->postFIFO(member_evt);
 			}
-
+			else printf("Unsubscribing didn't succeed\n");
 			status_ = Q_RET_HANDLED;
 			break;
 		}
@@ -159,7 +159,7 @@ namespace Core_Health {
 		return status_;
 	}
 
-	float ConvertSecondsToTicks(float seconds) {
+	QP::QTimeEvtCtr ConvertSecondsToTicks(unsigned int seconds) {
 		return (seconds * (BSP::TICKS_PER_SEC));
 	}
 }
