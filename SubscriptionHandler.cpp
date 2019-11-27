@@ -12,6 +12,7 @@ bool SubscriptionHandler::IsIdInSystem(int id)const {
 
 
 int SubscriptionHandler::FindFreeSpace()const {
+	//pass through the members array and check if any cell is empty; ie the ID = 'UNIDENTIFIED_ID'. If found, return the corresponding index. Else, return 'SYSTEM_FULL' ( = -1)
 	for (int i = 0; i < N_MEMBER; ++i) {
 		if (members[i].id == UNIDENTIFIED_ID) return i;
 	}
@@ -20,9 +21,10 @@ int SubscriptionHandler::FindFreeSpace()const {
 
 int SubscriptionHandler::GetNumberOfMembers() {
 	int num_of_subscribers = 0;
+	//pass through the members array and count the number of users present in the system
 	for (int i = 0; i < N_MEMBER; ++i) {
 		if (members[i].id != UNIDENTIFIED_ID) {
-			num_of_subscribers++;
+			++num_of_subscribers;
 		}
 	}
 	return num_of_subscribers;
@@ -30,7 +32,6 @@ int SubscriptionHandler::GetNumberOfMembers() {
 
 
 int SubscriptionHandler::SubscribeUser(int user_id) {
-	if (user_id < 0) return INVALID_INPUT;
 	int index = SYSTEM_FULL;
 	bool user_in_sys = IsIdInSystem(user_id);
 	if (user_in_sys) printf("User %d is already in the system\n", user_id);
@@ -92,8 +93,7 @@ bool SubscriptionHandler::AreAllMembersResponsive() {
 
 void SubscriptionHandler::UpdateAliveStatus(int sys_id) {
 	if ((sys_id < 0) || (sys_id >= N_MEMBER)) return;
-	//check if the user hasn't sent an ALIVE_SIG already: if not, update the members array in the appropriate index
-	if(members[sys_id].keep_alive_received == false) {
+	// update the members array in the appropriate index
 		members[sys_id].keep_alive_received = true;
-	}
+	
 }

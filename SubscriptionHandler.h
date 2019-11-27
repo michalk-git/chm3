@@ -1,17 +1,18 @@
 #pragma once
 #include "system.h"
-#include <mutex>
+
 using namespace std;
 #define INVALID_INPUT (-1)
 #define SYSTEM_FULL (-1)
 #define INVALID_ID (-1)
+
 class SubscriptionHandler {
 	User  members[N_MEMBER];
 
-	// IsIdInSystem : checks if a user with id = 'user_id' is already in the system
+	// checks if a user with id = 'user_id' is already in the system
 	bool IsIdInSystem(int user_id)const;
 
-	// FindFreeSpace : returns index of first empty cell in members array unless the members array is full; In that case, will return -1
+	// returns index of first empty cell in members array unless the members array is full; In that case, will return -1
 	int FindFreeSpace()const;
 
 public:
@@ -33,7 +34,7 @@ public:
 	// sets the 'keep_alive_received' parameter to true for the user associated with system id = 'sys_id'
 	void UpdateAliveStatus(int sys_id);
 
-	//returns the number of subscribed users
+	// returns the number of subscribed users
 	int GetNumberOfMembers();
 
 };

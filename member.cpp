@@ -93,7 +93,7 @@ namespace Core_Health {
 				AO_HealthMonitor->postFIFO(alive_evt, this);
 				cout << "member " << system_id << " has sent ALIVE signal" <<endl;
 			}
-			else num_deactivated_cycles--;
+			else --num_deactivated_cycles;
 			status_ = Q_RET_HANDLED;
 			break;
 		}
