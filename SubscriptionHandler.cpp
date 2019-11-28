@@ -19,16 +19,7 @@ int SubscriptionHandler::FindFreeSpace()const {
 	return SYSTEM_FULL;
 }
 
-int SubscriptionHandler::GetNumberOfMembers() {
-	int num_of_subscribers = 0;
-	//pass through the members array and count the number of users present in the system
-	for (int i = 0; i < N_MEMBER; ++i) {
-		if (members[i].id != UNIDENTIFIED_ID) {
-			++num_of_subscribers;
-		}
-	}
-	return num_of_subscribers;
-}
+
 
 
 int SubscriptionHandler::SubscribeUser(int user_id) {
@@ -40,10 +31,12 @@ int SubscriptionHandler::SubscribeUser(int user_id) {
 		index = FindFreeSpace();
 		// if a free space was found, subscribe user
 		if (index != SYSTEM_FULL) {
-			//if we found an index in the members array not associated with another user, register the new subscriber
+			//if we found an index in the members array not associated with another user, register the new subscriber and increase members count
 			members[index].id = user_id;
+			members_num++;
 			//the subscription is an ALIVE signal
 			members[index].keep_alive_received = true;
+
 
 		}
 		else printf("System full\n");
@@ -53,18 +46,16 @@ int SubscriptionHandler::SubscribeUser(int user_id) {
 
 
 bool SubscriptionHandler::UnSubscribeUser(int index) {
-	bool status = false;
-	if((index < 0) || (index >= N_MEMBER)) return false;
-	//update subscribers array to show that a user has unsubscribed
+	if (IndexInRange(index) == false) return false;
+	// update subscribers array to show that a user has unsubscribed and decrease members count
 	if (members[index].id != UNIDENTIFIED_ID) {
 		members[index].id = UNIDENTIFIED_ID;
-		status = true;
-		//check if the user has sent an ALIVE_SIG signal recently; if set 'keep_alive_received' to false
-		if (members[index].keep_alive_received == true) {
-			members[index].keep_alive_received = false;
-		}
+		members_num--;
+		// set 'keep_alive_received' to false
+		members[index].keep_alive_received = false;
+		return true;
 	}
-	return status;
+	return false;
 }
 
 
@@ -92,8 +83,13 @@ bool SubscriptionHandler::AreAllMembersResponsive() {
 }
 
 void SubscriptionHandler::UpdateAliveStatus(int sys_id) {
-	if ((sys_id < 0) || (sys_id >= N_MEMBER)) return;
+	if(IndexInRange(sys_id) == false) return;
 	// update the members array in the appropriate index
 		members[sys_id].keep_alive_received = true;
 	
+}
+
+bool SubscriptionHandler::IndexInRange(int index)const {
+	if ((index < 0) || (index >= N_MEMBER)) return false;
+	return true;
 }

@@ -8,6 +8,7 @@ using namespace std;
 
 class SubscriptionHandler {
 	User  members[N_MEMBER];
+	int members_num;
 
 	// checks if a user with id = 'user_id' is already in the system
 	bool IsIdInSystem(int user_id)const;
@@ -15,6 +16,7 @@ class SubscriptionHandler {
 	// returns index of first empty cell in members array unless the members array is full; In that case, will return -1
 	int FindFreeSpace()const;
 
+	bool IndexInRange(int index)const;
 public:
 	SubscriptionHandler() = default;
 
@@ -34,8 +36,7 @@ public:
 	// sets the 'keep_alive_received' parameter to true for the user associated with system id = 'sys_id'
 	void UpdateAliveStatus(int sys_id);
 
-	// returns the number of subscribed users
-	int GetNumberOfMembers();
+
 
 };
 

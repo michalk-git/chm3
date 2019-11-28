@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "watchdog.h"
-#include <map>
 #include <string>
 #include <iostream>
 Q_DEFINE_THIS_FILE
